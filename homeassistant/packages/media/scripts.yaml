@@ -1,6 +1,7 @@
 script:
   hip_homepod_announce:
     alias: HIP HomePod Announcement
+    mode: queued
     sequence:
       - action: tts.speak
         target:
@@ -8,3 +9,17 @@ script:
         data:
           media_player_entity_id: media_player.living_room_homepod
           message: "Attention. There is someone at the front door."
+
+automation:
+  - alias: HIP Doorbell HomePod Handler
+    id: hip_doorbell_homepod_handler
+    mode: single
+    trigger:
+      - platform: event
+        event_type: hip_doorbell_pressed
+    condition:
+      - condition: state
+        entity_id: input_boolean.hip_enabled
+        state: "on"
+    action:
+      - action: script.hip_homepod_announce

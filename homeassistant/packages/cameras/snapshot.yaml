@@ -1,5 +1,35 @@
 script:
   hip_capture_snapshot:
     alias: HIP Capture Snapshot
+    mode: queued
+    fields:
+      camera_entity:
+        required: false
+      snapshot_file:
+        required: false
     sequence:
-      - stop: "Snapshot implementation will be added in v1.2.0"
+      - variables:
+          resolved_camera_entity: >-
+            {{ camera_entity | default(states('input_text.hip_front_door_camera'), true) }}
+          resolved_snapshot_file: >-
+            {{ snapshot_file | default('/config/www/snapshots/front_door_latest.jpg', true) }}
+      - condition: template
+        value_template: "{{ resolved_camera_entity is string and resolved_camera_entity.startswith('camera.') }}"
+      - action: camera.snapshot
+        data:
+          entity_id: "{{ resolved_camera_entity }}"
+          filename: "{{ resolved_snapshot_file }}"
+
+automation:
+  - alias: HIP Doorbell Snapshot Handler
+    id: hip_doorbell_snapshot_handler
+    mode: single
+    trigger:
+      - platform: event
+        event_type: hip_doorbell_pressed
+    condition:
+      - condition: state
+        entity_id: input_boolean.hip_enabled
+        state: "on"
+    action:
+      - action: script.hip_capture_snapshot

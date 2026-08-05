@@ -4,14 +4,49 @@ script:
     mode: queued
     fields:
       event:
-        required: true
+        required: false
+      message:
+        required: false
     sequence:
+      - variables:
+          resolved_event: >-
+            {{ event | default(message, true) | default('HIP event', true) }}
       - action: input_text.set_value
         target:
           entity_id: input_text.hip_last_event
         data:
-          value: "{{ event }}"
+          value: "{{ resolved_event }}"
       - action: logbook.log
         data:
           name: HIP
-          message: "{{ event }}"
+          message: "{{ resolved_event }}"
+
+  hip_log_event:
+    alias: HIP Log Event
+    mode: queued
+    fields:
+      message:
+        required: false
+      event:
+        required: false
+    sequence:
+      - action: script.hip_event_log
+        data:
+          event: "{{ event | default(message, true) | default('HIP event', true) }}"
+
+automation:
+  - alias: HIP Doorbell Event Logger
+    id: hip_doorbell_event_logger
+    mode: single
+    trigger:
+      - platform: event
+        event_type: hip_doorbell_pressed
+    condition:
+      - condition: state
+        entity_id: input_boolean.hip_enabled
+        state: "on"
+    action:
+      - action: script.hip_log_event
+        data:
+          message: >-
+            {{ trigger.event.data.message | default('Front door doorbell pressed', true) }}
