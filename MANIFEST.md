@@ -1,7 +1,7 @@
-# HIP v1.1.0 Part 3
+# HIP v2.0.0 Milestone 1
 
 Adds:
-- Snapshot placeholders
-- Dashboard skeleton
-- Test checklist
-- Release notes
+- Event-driven doorbell pipeline
+- Production snapshot capture
+- Package-level event subscribers
+- Updated architecture and package documentation
