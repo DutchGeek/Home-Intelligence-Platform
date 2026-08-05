@@ -1,0 +1,12 @@
+input_boolean:
+  hip_enabled:
+    name: HIP Enabled
+    initial: true
+
+input_number:
+  hip_default_volume:
+    name: Default Announcement Volume
+    min: 0
+    max: 1
+    step: 0.05
+    initial: 0.7
