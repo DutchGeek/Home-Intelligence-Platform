@@ -1,0 +1,8 @@
+script:
+  hip_notify_doorbell:
+    alias: HIP Doorbell Notification
+    sequence:
+      - action: notify.mobile_app_robins_iphone
+        data:
+          title: Doorbell
+          message: Someone is at the front door.

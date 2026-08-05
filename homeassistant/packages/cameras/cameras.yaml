@@ -1,0 +1,4 @@
+input_text:
+  hip_front_door_camera:
+    name: HIP Front Door Camera
+    initial: camera.front_door

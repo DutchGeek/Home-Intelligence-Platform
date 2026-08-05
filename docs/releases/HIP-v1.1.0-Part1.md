@@ -1,0 +1,1 @@
+Initial functional core package.

@@ -1,0 +1,13 @@
+automation:
+  - alias: HIP Front Door Event
+    id: hip_front_door_event
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.doorbell_ringing
+        to: "on"
+    action:
+      - action: script.hip_notify_doorbell
+      - action: script.hip_homepod_announce
+      - action: script.hip_log_event
+        data:
+          message: "Front door doorbell pressed"

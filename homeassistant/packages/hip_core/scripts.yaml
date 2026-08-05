@@ -1,12 +1,17 @@
 script:
-  hip_log_event:
-    alias: HIP Log Event
+  hip_event_log:
+    alias: HIP Event Log
     mode: queued
     fields:
-      message:
+      event:
         required: true
     sequence:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_last_event
+        data:
+          value: "{{ event }}"
       - action: logbook.log
         data:
           name: HIP
-          message: "{{ message }}"
+          message: "{{ event }}"

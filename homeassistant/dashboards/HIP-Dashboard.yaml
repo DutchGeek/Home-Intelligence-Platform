@@ -1,0 +1,9 @@
+title: HIP
+views:
+  - title: Overview
+    path: hip
+    cards:
+      - type: markdown
+        content: |
+          # Home Intelligence Platform
+          v1.1.0

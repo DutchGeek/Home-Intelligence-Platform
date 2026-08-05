@@ -1,0 +1,5 @@
+script:
+  hip_capture_snapshot:
+    alias: HIP Capture Snapshot
+    sequence:
+      - stop: "Snapshot implementation will be added in v1.2.0"

@@ -1,0 +1,10 @@
+script:
+  hip_homepod_announce:
+    alias: HIP HomePod Announcement
+    sequence:
+      - action: tts.speak
+        target:
+          entity_id: tts.piper
+        data:
+          media_player_entity_id: media_player.living_room_homepod
+          message: "Attention. There is someone at the front door."
