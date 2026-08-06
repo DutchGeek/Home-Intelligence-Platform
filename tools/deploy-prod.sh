@@ -82,7 +82,10 @@ hip_progress 9 10 "Waiting for Home Assistant startup"
 hip_wait_for_home_assistant "${HIP_WAIT_TIMEOUT}"
 
 hip_progress 10 10 "Running validation and smoke tests"
-hip_run_validation_pipeline
+VALIDATION_OK="true"
+if ! hip_run_validation_pipeline; then
+	VALIDATION_OK="false"
+fi
 
 REPORT_TMP="$(mktemp)"
 cat > "${REPORT_TMP}" <<EOF
@@ -115,3 +118,7 @@ cat "${REPORT_TMP}"
 printf 'Deployment duration: %s\n' "${FORMATTED_DURATION}"
 printf '\nReport stored in container: %s\n' "${REPORT_PATH}"
 rm -f "${REPORT_TMP}"
+
+if [ "${VALIDATION_OK}" != "true" ]; then
+	exit 1
+fi

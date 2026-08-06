@@ -22,7 +22,10 @@ hip_ensure_state_directories
 TIMESTAMP="$(hip_timestamp_now)"
 
 hip_progress 2 3 "Running validation and smoke tests"
-hip_run_validation_pipeline
+VALIDATION_OK="true"
+if ! hip_run_validation_pipeline; then
+	VALIDATION_OK="false"
+fi
 
 CURRENT_VERSION="$(tr -d '[:space:]' < "${HIP_REPO_ROOT}/VERSION")"
 BACKUP_PATH="$(hip_latest_backup_for_target "${TARGET}")"
@@ -57,3 +60,7 @@ cat "${REPORT_TMP}"
 printf 'Validation duration: %s\n' "$(hip_format_duration "${ELAPSED}")"
 printf '\nReport stored in container: %s\n' "${REPORT_PATH}"
 rm -f "${REPORT_TMP}"
+
+if [ "${VALIDATION_OK}" != "true" ]; then
+	exit 1
+fi

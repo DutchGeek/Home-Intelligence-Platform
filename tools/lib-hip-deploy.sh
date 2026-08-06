@@ -19,6 +19,9 @@ HIP_DEFAULT_CONFIG_DIR="/mnt/apps/configs/hip"
 HIP_CONFIGURATION_SOURCE=""
 HIP_DRY_RUN="false"
 HIP_CONFIGURATION_FILE=""
+HIP_RUNTIME_CUSTOM_COMPONENTS_DIR="/config/custom_components"
+HIP_RUNTIME_PACKAGES_DIR="/config/homeassistant/packages"
+HIP_RUNTIME_DASHBOARDS_DIR="/config/homeassistant/dashboards"
 
 HIP_VALIDATE_RESULT=""
 HIP_SMOKE_RESULT=""
@@ -347,6 +350,25 @@ hip_wait_for_home_assistant() {
   done
 }
 
+hip_wait_for_hip_services() {
+  local timeout_seconds="${1:-$HIP_WAIT_TIMEOUT}"
+  local start
+  start="$(date +%s)"
+
+  while true; do
+    if hip_service_available "hip/validate" && hip_service_available "hip/run_smoke_tests"; then
+      return 0
+    fi
+
+    if [ $(( $(date +%s) - start )) -ge "${timeout_seconds}" ]; then
+      hip_log_error "timed out waiting for HIP services to register after ${timeout_seconds}s"
+      return 1
+    fi
+
+    sleep 3
+  done
+}
+
 hip_service_available() {
   local domain="${1%%/*}"
   local service="${1##*/}"
@@ -386,11 +408,10 @@ hip_run_validation_pipeline() {
   HIP_VALIDATION_STATUS="NOT_RUN"
   HIP_SMOKE_STATUS="NOT_RUN"
 
-  if ! hip_service_available "hip/validate" || ! hip_service_available "hip/run_smoke_tests"; then
-    printf 'HIP services not available yet.\nSkipping validation.\n'
-    HIP_VALIDATION_STATUS="SKIPPED"
-    HIP_SMOKE_STATUS="SKIPPED"
-    return 0
+  if ! hip_wait_for_hip_services "${HIP_WAIT_TIMEOUT}"; then
+    HIP_VALIDATION_STATUS="FAILED"
+    HIP_SMOKE_STATUS="FAILED"
+    return 1
   fi
 
   HIP_VALIDATE_RESULT="$(hip_call_service "hip/validate" '{}')"
@@ -405,8 +426,14 @@ hip_run_validation_pipeline() {
   if printf '%s' "${HIP_SMOKE_RESULT}" | grep -q '"passed"[[:space:]]*:[[:space:]]*true'; then
     HIP_SMOKE_STATUS="PASS"
   else
-    HIP_SMOKE_STATUS="WARN"
+    HIP_SMOKE_STATUS="FAIL"
   fi
+
+  if [ "${HIP_VALIDATION_STATUS}" != "PASS" ] || [ "${HIP_SMOKE_STATUS}" != "PASS" ]; then
+    return 1
+  fi
+
+  return 0
 }
 
 hip_restart_container() {
@@ -425,14 +452,14 @@ hip_backup_current() {
 
   docker exec "${HIP_CONTAINER_NAME}" sh -c "mkdir -p '${backup_path}/custom_components' '${backup_path}/homeassistant/packages' '${backup_path}/homeassistant/dashboards' '${backup_path}/hip'"
 
-  docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d /config/custom_components/hip ]; then cp -a /config/custom_components/hip '${backup_path}/custom_components/hip'; fi"
+  docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip ]; then cp -a ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip '${backup_path}/custom_components/hip'; fi"
 
   local pkg
   for pkg in hip_core security notifications media cameras device_registry visitor_intelligence test ai; do
-    docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d /config/homeassistant/packages/${pkg} ]; then cp -a /config/homeassistant/packages/${pkg} '${backup_path}/homeassistant/packages/${pkg}'; fi"
+    docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d ${HIP_RUNTIME_PACKAGES_DIR}/${pkg} ]; then cp -a ${HIP_RUNTIME_PACKAGES_DIR}/${pkg} '${backup_path}/homeassistant/packages/${pkg}'; fi"
   done
 
-  docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -f /config/homeassistant/dashboards/HIP-Dashboard.yaml ]; then cp -a /config/homeassistant/dashboards/HIP-Dashboard.yaml '${backup_path}/homeassistant/dashboards/HIP-Dashboard.yaml'; fi"
+  docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -f ${HIP_RUNTIME_DASHBOARDS_DIR}/HIP-Dashboard.yaml ]; then cp -a ${HIP_RUNTIME_DASHBOARDS_DIR}/HIP-Dashboard.yaml '${backup_path}/homeassistant/dashboards/HIP-Dashboard.yaml'; fi"
   docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d /config/hip ]; then cp -a /config/hip/. '${backup_path}/hip/'; fi"
 
   local metadata_tmp
@@ -453,21 +480,21 @@ EOF
 hip_copy_runtime_files() {
   local repo_root="$1"
 
-  docker exec "${HIP_CONTAINER_NAME}" sh -c "mkdir -p /config/custom_components /config/homeassistant/packages /config/homeassistant/dashboards"
+  docker exec "${HIP_CONTAINER_NAME}" sh -c "mkdir -p ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR} ${HIP_RUNTIME_PACKAGES_DIR} ${HIP_RUNTIME_DASHBOARDS_DIR}"
 
-  docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf /config/custom_components/hip"
-  docker cp "${repo_root}/custom_components/hip" "${HIP_CONTAINER_NAME}:/config/custom_components/hip"
+  docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip"
+  docker cp "${repo_root}/custom_components/hip" "${HIP_CONTAINER_NAME}:${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip"
 
   local pkg
   for pkg in hip_core security notifications media cameras device_registry visitor_intelligence test ai; do
     if [ -d "${repo_root}/homeassistant/packages/${pkg}" ]; then
-      docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf /config/homeassistant/packages/${pkg}"
-      docker cp "${repo_root}/homeassistant/packages/${pkg}" "${HIP_CONTAINER_NAME}:/config/homeassistant/packages/${pkg}"
+      docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf ${HIP_RUNTIME_PACKAGES_DIR}/${pkg}"
+      docker cp "${repo_root}/homeassistant/packages/${pkg}" "${HIP_CONTAINER_NAME}:${HIP_RUNTIME_PACKAGES_DIR}/${pkg}"
     fi
   done
 
   if [ -f "${repo_root}/homeassistant/dashboards/HIP-Dashboard.yaml" ]; then
-    docker cp "${repo_root}/homeassistant/dashboards/HIP-Dashboard.yaml" "${HIP_CONTAINER_NAME}:/config/homeassistant/dashboards/HIP-Dashboard.yaml"
+    docker cp "${repo_root}/homeassistant/dashboards/HIP-Dashboard.yaml" "${HIP_CONTAINER_NAME}:${HIP_RUNTIME_DASHBOARDS_DIR}/HIP-Dashboard.yaml"
   fi
 
   if [ -d "${repo_root}/hip" ]; then
@@ -481,16 +508,16 @@ hip_restore_backup() {
 
   docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ ! -d '${backup_path}' ]; then echo 'ERROR: backup path not found: ${backup_path}' >&2; exit 1; fi"
 
-  docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf /config/custom_components/hip"
-  docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d '${backup_path}/custom_components/hip' ]; then cp -a '${backup_path}/custom_components/hip' /config/custom_components/hip; fi"
+  docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip"
+  docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d '${backup_path}/custom_components/hip' ]; then cp -a '${backup_path}/custom_components/hip' ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip; fi"
 
   local pkg
   for pkg in hip_core security notifications media cameras device_registry visitor_intelligence test ai; do
-    docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf /config/homeassistant/packages/${pkg}"
-    docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d '${backup_path}/homeassistant/packages/${pkg}' ]; then cp -a '${backup_path}/homeassistant/packages/${pkg}' /config/homeassistant/packages/${pkg}; fi"
+    docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf ${HIP_RUNTIME_PACKAGES_DIR}/${pkg}"
+    docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d '${backup_path}/homeassistant/packages/${pkg}' ]; then cp -a '${backup_path}/homeassistant/packages/${pkg}' ${HIP_RUNTIME_PACKAGES_DIR}/${pkg}; fi"
   done
 
-  docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -f '${backup_path}/homeassistant/dashboards/HIP-Dashboard.yaml' ]; then cp -a '${backup_path}/homeassistant/dashboards/HIP-Dashboard.yaml' /config/homeassistant/dashboards/HIP-Dashboard.yaml; fi"
+  docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -f '${backup_path}/homeassistant/dashboards/HIP-Dashboard.yaml' ]; then cp -a '${backup_path}/homeassistant/dashboards/HIP-Dashboard.yaml' ${HIP_RUNTIME_DASHBOARDS_DIR}/HIP-Dashboard.yaml; fi"
   docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d '${backup_path}/hip' ]; then rm -rf /config/hip && mkdir -p /config/hip && cp -a '${backup_path}/hip/.' /config/hip/; fi"
 }
 
