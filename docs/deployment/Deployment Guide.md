@@ -14,6 +14,19 @@ Local machine files:
 1. `/mnt/apps/configs/hip/dev.env`
 2. `/mnt/apps/configs/hip/prod.env`
 
+## Canonical runtime paths
+Repository source paths:
+1. `custom_components/hip`
+2. `homeassistant/packages`
+3. `homeassistant/dashboards/HIP-Dashboard.yaml`
+
+Home Assistant runtime paths:
+1. `/config/custom_components/hip`
+2. `/config/packages`
+3. `/config/homeassistant/dashboards/HIP-Dashboard.yaml`
+
+HIP uses `/config/packages` as the canonical package load target.
+
 ## Configuration source resolution
 Deployment scripts resolve configuration in this order:
 1. `HIP_CONFIG_DIR` environment variable

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,6 +93,17 @@ def test_deployment_library_uses_external_configuration_directory() -> None:
     content = (TOOLS / "lib-hip-deploy.sh").read_text(encoding="utf-8")
     assert "HIP_DEFAULT_CONFIG_DIR=\"/mnt/apps/configs/hip\"" in content
     assert "HIP_CONFIG_DIR" in content
+    assert "HIP_RUNTIME_PACKAGES_DIR=\"/config/packages\"" in content
+
+
+def test_no_templated_entity_id_in_state_triggers_or_conditions() -> None:
+    pattern = re.compile(
+        r"(?:condition:\\s*state|platform:\\s*state)[\\s\\S]{0,260}?entity_id:\\s*\\\"\\{\\{",
+        re.IGNORECASE,
+    )
+    for yaml_path in ROOT.glob("homeassistant/packages/**/*.yaml"):
+        content = yaml_path.read_text(encoding="utf-8")
+        assert pattern.search(content) is None, f"templated state entity_id found in {yaml_path}"
 
 
 def test_root_deploy_wrappers_exist() -> None:
