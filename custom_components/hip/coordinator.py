@@ -461,14 +461,21 @@ class HipDataUpdateCoordinator(DataUpdateCoordinator[HipStatus]):
         if status.runtime_status == "healthy":
             async_delete_issue(self.hass, DOMAIN, issue_id)
             return
-        async_create_issue(
-            self.hass,
-            DOMAIN,
-            issue_id,
-            is_fixable=False,
-            severity=IssueSeverity.WARNING,
-            translation_key="runtime_health",
-            issue_domain=DOMAIN,
-            learn_more_url=self.documentation_url,
-            placeholders={"runtime_status": status.runtime_status},
-        )
+        issue_kwargs: dict[str, Any] = {
+            "is_fixable": False,
+            "severity": IssueSeverity.WARNING,
+            "translation_key": "runtime_health",
+            "issue_domain": DOMAIN,
+            "learn_more_url": self.documentation_url,
+        }
+        try:
+            async_create_issue(
+                self.hass,
+                DOMAIN,
+                issue_id,
+                translation_placeholders={"runtime_status": status.runtime_status},
+                **issue_kwargs,
+            )
+        except TypeError:
+            # Compatibility fallback for HA builds that do not support issue translation placeholders.
+            async_create_issue(self.hass, DOMAIN, issue_id, **issue_kwargs)
