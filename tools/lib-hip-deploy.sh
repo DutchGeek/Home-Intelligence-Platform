@@ -378,8 +378,34 @@ hip_service_available() {
     return 1
   fi
 
-  printf '%s' "${payload}" | grep -q "\"domain\"[[:space:]]*:[[:space:]]*\"${domain}\"" && \
-    printf '%s' "${payload}" | grep -q "\"service\"[[:space:]]*:[[:space:]]*\"${service}\""
+  HIP_SERVICES_PAYLOAD="${payload}" python3 - "${domain}" "${service}" <<'PY'
+import json
+import os
+import sys
+
+domain = sys.argv[1]
+service = sys.argv[2]
+payload = os.environ.get("HIP_SERVICES_PAYLOAD", "")
+
+try:
+    data = json.loads(payload)
+except Exception:
+    sys.exit(1)
+
+if not isinstance(data, list):
+    sys.exit(1)
+
+for item in data:
+    if not isinstance(item, dict):
+        continue
+    if item.get("domain") != domain:
+        continue
+    services = item.get("services")
+    if isinstance(services, dict) and service in services:
+        sys.exit(0)
+
+sys.exit(1)
+PY
 }
 
 hip_call_service() {
