@@ -27,6 +27,9 @@ HIP_VALIDATE_RESULT=""
 HIP_SMOKE_RESULT=""
 HIP_VALIDATION_STATUS="NOT_RUN"
 HIP_SMOKE_STATUS="NOT_RUN"
+HIP_SERVICES_CACHE_JSON=""
+HIP_SERVICES_CACHE_INDEX=""
+HIP_SERVICES_CACHE_READY="false"
 
 C_RESET=""
 C_BOLD=""
@@ -355,6 +358,10 @@ hip_wait_for_hip_services() {
   local start
   start="$(date +%s)"
 
+  if ! hip_prepare_services_cache; then
+    return 1
+  fi
+
   while true; do
     if hip_service_available "hip/validate" && hip_service_available "hip/run_smoke_tests"; then
       return 0
@@ -369,43 +376,81 @@ hip_wait_for_hip_services() {
   done
 }
 
-hip_service_available() {
-  local domain="${1%%/*}"
-  local service="${1##*/}"
-  local payload
+hip_prepare_services_cache() {
+  if [ "${HIP_SERVICES_CACHE_READY}" = "true" ] && [ -f "${HIP_SERVICES_CACHE_JSON}" ] && [ -f "${HIP_SERVICES_CACHE_INDEX}" ]; then
+    return 0
+  fi
 
-  if ! payload="$(curl -fsS -H "Authorization: Bearer ${HIP_HA_TOKEN}" -H "Content-Type: application/json" "${HIP_HA_URL}/api/services" 2>/dev/null)"; then
+  local services_json_tmp services_index_tmp
+  services_json_tmp="$(mktemp)"
+  services_index_tmp="$(mktemp)"
+
+  if ! curl -fsS \
+    -H "Authorization: Bearer ${HIP_HA_TOKEN}" \
+    -H "Content-Type: application/json" \
+    "${HIP_HA_URL}/api/services" > "${services_json_tmp}" 2>/dev/null; then
+    hip_log_error "failed to fetch Home Assistant services from ${HIP_HA_URL}/api/services"
+    rm -f "${services_json_tmp}" "${services_index_tmp}"
     return 1
   fi
 
-  HIP_SERVICES_PAYLOAD="${payload}" python3 - "${domain}" "${service}" <<'PY'
+  if ! python3 - "${services_json_tmp}" "${services_index_tmp}" <<'PY'
 import json
-import os
 import sys
 
-domain = sys.argv[1]
-service = sys.argv[2]
-payload = os.environ.get("HIP_SERVICES_PAYLOAD", "")
+json_path = sys.argv[1]
+index_path = sys.argv[2]
 
-try:
-    data = json.loads(payload)
-except Exception:
-    sys.exit(1)
+with open(json_path, "r", encoding="utf-8") as handle:
+    data = json.load(handle)
 
 if not isinstance(data, list):
     sys.exit(1)
 
-for item in data:
-    if not isinstance(item, dict):
+items = set()
+for entry in data:
+    if not isinstance(entry, dict):
         continue
-    if item.get("domain") != domain:
+    domain = entry.get("domain")
+    services = entry.get("services")
+    if not isinstance(domain, str) or not isinstance(services, dict):
         continue
-    services = item.get("services")
-    if isinstance(services, dict) and service in services:
-        sys.exit(0)
+    for service_name in services:
+        if isinstance(service_name, str):
+            items.add(f"{domain}/{service_name}")
 
-sys.exit(1)
+with open(index_path, "w", encoding="utf-8") as handle:
+    for service_path in sorted(items):
+        handle.write(service_path + "\n")
 PY
+  then
+    hip_log_error "failed to parse Home Assistant services JSON from ${HIP_HA_URL}/api/services"
+    rm -f "${services_json_tmp}" "${services_index_tmp}"
+    return 1
+  fi
+
+  if [ -n "${HIP_SERVICES_CACHE_JSON}" ]; then
+    rm -f "${HIP_SERVICES_CACHE_JSON}" >/dev/null 2>&1 || true
+  fi
+  if [ -n "${HIP_SERVICES_CACHE_INDEX}" ]; then
+    rm -f "${HIP_SERVICES_CACHE_INDEX}" >/dev/null 2>&1 || true
+  fi
+
+  HIP_SERVICES_CACHE_JSON="${services_json_tmp}"
+  HIP_SERVICES_CACHE_INDEX="${services_index_tmp}"
+  HIP_SERVICES_CACHE_READY="true"
+  return 0
+}
+
+hip_service_available() {
+  local domain="${1%%/*}"
+  local service="${1##*/}"
+
+  if ! hip_prepare_services_cache; then
+    return 1
+  fi
+
+  grep -Fxq "${domain}/${service}" "${HIP_SERVICES_CACHE_INDEX}"
 }
 
 hip_call_service() {
