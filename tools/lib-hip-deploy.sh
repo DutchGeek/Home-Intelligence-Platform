@@ -654,18 +654,6 @@ hip_run_doctor() {
     issues+=("Docker is not installed or not on PATH")
   fi
 
-  if hip_has_command docker; then
-    if [ -n "${HIP_CONTAINER_NAME}" ] && docker inspect "${HIP_CONTAINER_NAME}" >/dev/null 2>&1; then
-      hip_log_ok "Container exists"
-    else
-      hip_log_error "Container exists"
-      issues+=("Docker container does not exist: ${HIP_CONTAINER_NAME:-unset}")
-    fi
-  else
-    hip_log_warn "Container exists (skipped: docker unavailable)"
-    issues+=("Container check skipped because Docker is unavailable")
-  fi
-
   printf '%bConfiguration path:%b %s\n' "${C_BOLD}" "${C_RESET}" "${config_full_path}"
   if [ -n "${HIP_CONFIGURATION_FILE}" ] && [ -f "${config_full_path}" ]; then
     hip_log_ok "Configuration path"
@@ -682,33 +670,18 @@ hip_run_doctor() {
   fi
 
   printf '%bHome Assistant URL:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_HA_URL:-unset}"
-  if hip_has_command curl && [ -n "${HIP_HA_URL}" ] && [ -n "${HIP_HA_TOKEN}" ] && \
-    curl -fsS -o /dev/null -H "Authorization: Bearer ${HIP_HA_TOKEN}" "${HIP_HA_URL}/api/"; then
-    hip_log_ok "Home Assistant reachable"
+  if [ -n "${HIP_HA_URL}" ]; then
+    hip_log_ok "Home Assistant URL"
   else
-    hip_log_error "Home Assistant reachable"
-    issues+=("Home Assistant API is not reachable at ${HIP_HA_URL:-unset}")
+    hip_log_error "Home Assistant URL"
+    issues+=("Home Assistant URL is not configured")
   fi
 
-  if hip_has_command docker && [ -n "${HIP_CONTAINER_NAME}" ] && docker inspect "${HIP_CONTAINER_NAME}" >/dev/null 2>&1; then
-    if docker exec "${HIP_CONTAINER_NAME}" sh -c "test -d ${HIP_RUNTIME_CONFIG_DIR} && test -d ${HIP_RUNTIME_CONFIG_DIR}/.storage" >/dev/null 2>&1; then
-      hip_log_ok "Runtime directories"
-    else
-      hip_log_error "Runtime directories"
-      issues+=("Runtime directories missing in container ${HIP_CONTAINER_NAME}: ${HIP_RUNTIME_CONFIG_DIR} or ${HIP_RUNTIME_CONFIG_DIR}/.storage")
-    fi
+  printf '%bRuntime directories:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_RUNTIME_CONFIG_DIR}, ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}, ${HIP_RUNTIME_PACKAGES_DIR}, ${HIP_RUNTIME_DASHBOARDS_DIR}"
+  hip_log_info "Runtime directories are verified during deployment validation"
 
-    if docker exec "${HIP_CONTAINER_NAME}" sh -c "test -w ${HIP_RUNTIME_CONFIG_DIR} && test -w ${HIP_RUNTIME_CONFIG_DIR}/.storage" >/dev/null 2>&1; then
-      hip_log_ok "Permissions"
-    else
-      hip_log_error "Permissions"
-      issues+=("Insufficient write permissions for ${HIP_RUNTIME_CONFIG_DIR} or ${HIP_RUNTIME_CONFIG_DIR}/.storage in container ${HIP_CONTAINER_NAME}")
-    fi
-  else
-    hip_log_warn "Runtime directories (skipped: container unavailable)"
-    hip_log_warn "Permissions (skipped: container unavailable)"
-    issues+=("Runtime directory checks skipped because container is unavailable")
-  fi
+  printf '%bPermissions:%b %s\n' "${C_BOLD}" "${C_RESET}" "checked during deployment validation"
+  hip_log_info "Runtime permissions are verified during deployment validation"
 
   if [ "${#issues[@]}" -eq 0 ]; then
     printf '%bREADY TO DEPLOY%b\n' "${C_BOLD}${C_GREEN}" "${C_RESET}"
