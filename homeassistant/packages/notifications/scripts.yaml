@@ -2,26 +2,32 @@ script:
   hip_notify_doorbell:
     alias: HIP Doorbell Notification
     mode: queued
+    fields:
+      event_id:
+        required: false
+      contract_version:
+        required: false
+      event_type:
+        required: false
+      source:
+        required: false
+      message:
+        required: false
+      occurred_at:
+        required: false
+      lifecycle:
+        required: false
+      artifact_path:
+        required: false
+      artifact_public_path:
+        required: false
     sequence:
       - action: notify.mobile_app_robins_iphone
         data:
           title: Doorbell
-          message: Someone is at the front door.
+          message: "{{ message | default('Someone is at the front door.', true) }}"
           data:
             push:
               sound: default
-            image: /local/snapshots/front_door_latest.jpg
-
-automation:
-  - alias: HIP Doorbell Notification Handler
-    id: hip_doorbell_notification_handler
-    mode: single
-    trigger:
-      - platform: event
-        event_type: hip_doorbell_pressed
-    condition:
-      - condition: state
-        entity_id: input_boolean.hip_enabled
-        state: "on"
-    action:
-      - action: script.hip_notify_doorbell
+            image: >-
+              {{ artifact_public_path | default('/local/snapshots/front_door_latest.jpg', true) }}

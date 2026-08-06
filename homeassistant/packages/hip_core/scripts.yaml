@@ -1,4 +1,284 @@
 script:
+  hip_event_manager:
+    alias: HIP Event Manager
+    mode: queued
+    fields:
+      contract_version:
+        required: false
+      event_type:
+        required: false
+      source:
+        required: false
+      message:
+        required: false
+      occurred_at:
+        required: false
+      event_id:
+        required: false
+      artifact_path:
+        required: false
+      artifact_public_path:
+        required: false
+    sequence:
+      - variables:
+          resolved_contract_version: >-
+            {{ contract_version | default(states('input_text.hip_last_event_contract_version'), true) | default('hip.event.v1', true) }}
+          resolved_event_type: >-
+            {{ event_type | default('doorbell_pressed', true) }}
+          resolved_source: >-
+            {{ source | default('security.front_door', true) }}
+          resolved_message: >-
+            {{ message | default('Front door doorbell pressed', true) }}
+          resolved_occurred_at: >-
+            {{ occurred_at | default(now().strftime('%Y-%m-%dT%H:%M:%S%z'), true) }}
+          resolved_event_id: >-
+            {{ event_id | default('hip-' ~ now().strftime('%Y%m%d%H%M%S%f'), true) }}
+          resolved_artifact_path: >-
+            {{ artifact_path | default(states('input_text.hip_snapshot_artifact_path'), true) | default('/config/www/snapshots/front_door_latest.jpg', true) }}
+          resolved_artifact_public_path: >-
+            {{ artifact_public_path | default(states('input_text.hip_snapshot_public_path'), true) | default('/local/snapshots/front_door_latest.jpg', true) }}
+      - action: script.hip_event_persist
+        data:
+          event_id: "{{ resolved_event_id }}"
+          contract_version: "{{ resolved_contract_version }}"
+          event_type: "{{ resolved_event_type }}"
+          source: "{{ resolved_source }}"
+          message: "{{ resolved_message }}"
+          occurred_at: "{{ resolved_occurred_at }}"
+          lifecycle: accepted
+          artifact_path: "{{ resolved_artifact_path }}"
+          artifact_public_path: "{{ resolved_artifact_public_path }}"
+      - event: hip_doorbell_pressed
+        event_data:
+          event_id: "{{ resolved_event_id }}"
+          contract_version: "{{ resolved_contract_version }}"
+          event_type: "{{ resolved_event_type }}"
+          source: "{{ resolved_source }}"
+          message: "{{ resolved_message }}"
+          occurred_at: "{{ resolved_occurred_at }}"
+          lifecycle: accepted
+          artifact_path: "{{ resolved_artifact_path }}"
+          artifact_public_path: "{{ resolved_artifact_public_path }}"
+      - action: script.hip_artifact_manager
+        data:
+          event_id: "{{ resolved_event_id }}"
+          event_type: "{{ resolved_event_type }}"
+          artifact_path: "{{ resolved_artifact_path }}"
+          artifact_public_path: "{{ resolved_artifact_public_path }}"
+      - action: script.hip_capture_snapshot
+        data:
+          event_id: "{{ resolved_event_id }}"
+          contract_version: "{{ resolved_contract_version }}"
+          event_type: "{{ resolved_event_type }}"
+          source: "{{ resolved_source }}"
+          message: "{{ resolved_message }}"
+          occurred_at: "{{ resolved_occurred_at }}"
+          artifact_path: "{{ resolved_artifact_path }}"
+          artifact_public_path: "{{ resolved_artifact_public_path }}"
+          snapshot_file: "{{ resolved_artifact_path }}"
+      - action: script.hip_event_persist
+        data:
+          event_id: "{{ resolved_event_id }}"
+          contract_version: "{{ resolved_contract_version }}"
+          event_type: "{{ resolved_event_type }}"
+          source: "{{ resolved_source }}"
+          message: "{{ resolved_message }}"
+          occurred_at: "{{ resolved_occurred_at }}"
+          lifecycle: artifact_captured
+          artifact_path: "{{ resolved_artifact_path }}"
+          artifact_public_path: "{{ resolved_artifact_public_path }}"
+      - action: script.hip_event_dispatch
+        data:
+          event_id: "{{ resolved_event_id }}"
+          contract_version: "{{ resolved_contract_version }}"
+          event_type: "{{ resolved_event_type }}"
+          source: "{{ resolved_source }}"
+          message: "{{ resolved_message }}"
+          occurred_at: "{{ resolved_occurred_at }}"
+          lifecycle: dispatched
+          artifact_path: "{{ resolved_artifact_path }}"
+          artifact_public_path: "{{ resolved_artifact_public_path }}"
+      - action: script.hip_event_persist
+        data:
+          event_id: "{{ resolved_event_id }}"
+          contract_version: "{{ resolved_contract_version }}"
+          event_type: "{{ resolved_event_type }}"
+          source: "{{ resolved_source }}"
+          message: "{{ resolved_message }}"
+          occurred_at: "{{ resolved_occurred_at }}"
+          lifecycle: completed
+          artifact_path: "{{ resolved_artifact_path }}"
+          artifact_public_path: "{{ resolved_artifact_public_path }}"
+
+  hip_event_persist:
+    alias: HIP Event Persistence
+    mode: queued
+    fields:
+      event_id:
+        required: true
+      contract_version:
+        required: true
+      event_type:
+        required: true
+      source:
+        required: true
+      message:
+        required: true
+      occurred_at:
+        required: true
+      lifecycle:
+        required: true
+      artifact_path:
+        required: false
+      artifact_public_path:
+        required: false
+    sequence:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_last_event
+        data:
+          value: "{{ message }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_last_event_id
+        data:
+          value: "{{ event_id }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_last_event_type
+        data:
+          value: "{{ event_type }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_last_event_source
+        data:
+          value: "{{ source }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_last_event_contract_version
+        data:
+          value: "{{ contract_version }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_last_event_lifecycle
+        data:
+          value: "{{ lifecycle }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_last_event_artifact
+        data:
+          value: "{{ artifact_path | default('', true) }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_last_event_artifact_public
+        data:
+          value: "{{ artifact_public_path | default('', true) }}"
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.hip_last_event_at
+        data:
+          datetime: "{{ occurred_at }}"
+
+  hip_artifact_manager:
+    alias: HIP Artifact Manager
+    mode: queued
+    fields:
+      event_id:
+        required: false
+      event_type:
+        required: false
+      artifact_path:
+        required: false
+      artifact_public_path:
+        required: false
+    sequence:
+      - action: script.hip_retention_policy
+        data:
+          artifact_path: "{{ artifact_path | default(states('input_text.hip_snapshot_artifact_path'), true) }}"
+          artifact_public_path: "{{ artifact_public_path | default(states('input_text.hip_snapshot_public_path'), true) }}"
+
+  hip_retention_policy:
+    alias: HIP Retention Policy
+    mode: queued
+    fields:
+      artifact_path:
+        required: false
+      artifact_public_path:
+        required: false
+    sequence:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_artifact_retention_policy
+        data:
+          value: overwrite_latest
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_last_event_artifact
+        data:
+          value: "{{ artifact_path | default(states('input_text.hip_snapshot_artifact_path'), true) }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_last_event_artifact_public
+        data:
+          value: "{{ artifact_public_path | default(states('input_text.hip_snapshot_public_path'), true) }}"
+
+  hip_event_dispatch:
+    alias: HIP Event Dispatch
+    mode: queued
+    fields:
+      event_id:
+        required: true
+      contract_version:
+        required: true
+      event_type:
+        required: true
+      source:
+        required: true
+      message:
+        required: true
+      occurred_at:
+        required: true
+      lifecycle:
+        required: true
+      artifact_path:
+        required: false
+      artifact_public_path:
+        required: false
+    sequence:
+      - action: script.hip_notify_doorbell
+        data:
+          event_id: "{{ event_id }}"
+          contract_version: "{{ contract_version }}"
+          event_type: "{{ event_type }}"
+          source: "{{ source }}"
+          message: "{{ message }}"
+          occurred_at: "{{ occurred_at }}"
+          lifecycle: "{{ lifecycle }}"
+          artifact_path: "{{ artifact_path | default('', true) }}"
+          artifact_public_path: "{{ artifact_public_path | default('', true) }}"
+      - action: script.hip_homepod_announce
+        data:
+          event_id: "{{ event_id }}"
+          contract_version: "{{ contract_version }}"
+          event_type: "{{ event_type }}"
+          source: "{{ source }}"
+          message: "{{ message }}"
+          occurred_at: "{{ occurred_at }}"
+          lifecycle: "{{ lifecycle }}"
+          artifact_path: "{{ artifact_path | default('', true) }}"
+          artifact_public_path: "{{ artifact_public_path | default('', true) }}"
+      - action: script.hip_log_event
+        data:
+          event_id: "{{ event_id }}"
+          contract_version: "{{ contract_version }}"
+          event_type: "{{ event_type }}"
+          source: "{{ source }}"
+          occurred_at: "{{ occurred_at }}"
+          lifecycle: "{{ lifecycle }}"
+          artifact_path: "{{ artifact_path | default('', true) }}"
+          artifact_public_path: "{{ artifact_public_path | default('', true) }}"
+          message: "{{ message }}"
+
   hip_event_log:
     alias: HIP Event Log
     mode: queued
@@ -6,6 +286,22 @@ script:
       event:
         required: false
       message:
+        required: false
+      event_id:
+        required: false
+      contract_version:
+        required: false
+      event_type:
+        required: false
+      source:
+        required: false
+      occurred_at:
+        required: false
+      lifecycle:
+        required: false
+      artifact_path:
+        required: false
+      artifact_public_path:
         required: false
     sequence:
       - variables:
@@ -29,24 +325,23 @@ script:
         required: false
       event:
         required: false
+      event_id:
+        required: false
+      contract_version:
+        required: false
+      event_type:
+        required: false
+      source:
+        required: false
+      occurred_at:
+        required: false
+      lifecycle:
+        required: false
+      artifact_path:
+        required: false
+      artifact_public_path:
+        required: false
     sequence:
       - action: script.hip_event_log
         data:
           event: "{{ event | default(message, true) | default('HIP event', true) }}"
-
-automation:
-  - alias: HIP Doorbell Event Logger
-    id: hip_doorbell_event_logger
-    mode: single
-    trigger:
-      - platform: event
-        event_type: hip_doorbell_pressed
-    condition:
-      - condition: state
-        entity_id: input_boolean.hip_enabled
-        state: "on"
-    action:
-      - action: script.hip_log_event
-        data:
-          message: >-
-            {{ trigger.event.data.message | default('Front door doorbell pressed', true) }}

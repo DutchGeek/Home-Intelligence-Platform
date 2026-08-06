@@ -2,24 +2,30 @@ script:
   hip_homepod_announce:
     alias: HIP HomePod Announcement
     mode: queued
+    fields:
+      event_id:
+        required: false
+      contract_version:
+        required: false
+      event_type:
+        required: false
+      source:
+        required: false
+      message:
+        required: false
+      occurred_at:
+        required: false
+      lifecycle:
+        required: false
+      artifact_path:
+        required: false
+      artifact_public_path:
+        required: false
     sequence:
       - action: tts.speak
         target:
           entity_id: tts.piper
         data:
           media_player_entity_id: media_player.living_room_homepod
-          message: "Attention. There is someone at the front door."
-
-automation:
-  - alias: HIP Doorbell HomePod Handler
-    id: hip_doorbell_homepod_handler
-    mode: single
-    trigger:
-      - platform: event
-        event_type: hip_doorbell_pressed
-    condition:
-      - condition: state
-        entity_id: input_boolean.hip_enabled
-        state: "on"
-    action:
-      - action: script.hip_homepod_announce
+          message: >-
+            {{ message | default('Attention. There is someone at the front door.', true) }}

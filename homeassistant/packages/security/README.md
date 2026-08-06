@@ -6,11 +6,9 @@ The Security package is the source of truth for doorbell event detection.
 - automation.hip_front_door_event
 
 ## Event Publisher
-- Publishes custom event type: hip_doorbell_pressed
-- Event payload fields:
-	- source
-	- message
+- Invokes script.hip_event_manager
+- Supplies the normalized trigger input for contract version hip.event.v1
 
 ## Responsibility
 - Detect security-domain triggers
-- Publish normalized HIP events for downstream packages
+- Hand one event trigger to the centralized event runtime

@@ -11,7 +11,9 @@ automation:
         entity_id: input_boolean.hip_enabled
         state: "on"
     action:
-      - event: hip_doorbell_pressed
-        event_data:
+      - action: script.hip_event_manager
+        data:
+          contract_version: hip.event.v1
+          event_type: doorbell_pressed
           source: security.front_door
           message: "Front door doorbell pressed"

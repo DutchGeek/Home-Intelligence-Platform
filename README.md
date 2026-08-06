@@ -1,6 +1,6 @@
 # Home Intelligence Platform (HIP)
 
-Version: 2.0.1
+Version: 2.1.0
 
 A modular, event-driven Home Assistant platform.
 
@@ -38,3 +38,9 @@ A modular, event-driven Home Assistant platform.
 - Architecture decision records added under docs/adr
 - Development standards, release checklists, and contributor policies added
 
+## v2.1.0 Event Runtime
+- Added a centralized event manager in HIP Core
+- Added versioned event contract hip.event.v1
+- Added helper-backed event persistence and lifecycle state
+- Added artifact manager, snapshot manager flow, and retention policy ownership
+- Preserved the existing doorbell behavior without direct subscriber communication

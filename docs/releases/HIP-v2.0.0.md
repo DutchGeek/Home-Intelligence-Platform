@@ -48,3 +48,5 @@ HIP v2.0.0 establishes a production package-first, event-driven architecture for
 - Whisper transcription pipeline
 - Ollama local reasoning flows
 
+## Superseded By
+The event runtime introduced in HIP v2.1.0 centralizes lifecycle management while preserving the user-visible behavior documented in this release.

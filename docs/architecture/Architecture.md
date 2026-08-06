@@ -1,24 +1,34 @@
 # HIP Architecture
 
-Home Assistant packages are the primary modular boundary in HIP v2.0.0.
+Home Assistant packages are the primary modular boundary in HIP v2.1.0.
 
 ## Event-Driven Flow
 
 binary_sensor.doorbell_ringing
--> Security publisher (automation.hip_front_door_event)
--> custom event hip_doorbell_pressed
--> package subscribers:
-- HIP Core logger
-- Notification handler
-- Media handler
-- Camera snapshot handler
+-> Security trigger (automation.hip_front_door_event)
+-> HIP Event Manager (script.hip_event_manager)
+-> HIP event contract `hip.event.v1`
+-> persistence and lifecycle updates
+-> artifact manager and snapshot manager
+-> subscriber dispatch scripts:
+- Notification subscriber
+- Media subscriber
+- Logging subscriber
 
 ## Package Responsibilities
-- HIP Core: global enable state and event logging
-- Security: event detection and publishing
-- Notifications: iPhone notifications
-- Media: Piper HomePod announcements
-- Cameras: snapshot capture
+- HIP Core: event manager, persistence, lifecycle, artifact management, and logging
+- Security: trigger detection and event manager entrypoint
+- Notifications: mobile notification subscriber implementation
+- Media: Piper HomePod announcement subscriber implementation
+- Cameras: snapshot subscriber implementation used by the event manager
+
+## Event Runtime
+- One event: `hip_doorbell_pressed`
+- One contract: `hip.event.v1`
+- One lifecycle owner: `script.hip_event_manager`
+- One persistence model: helper-backed latest-event state in HIP Core
+- One artifact manager: `script.hip_artifact_manager`
+- Subscribers do not communicate directly
 
 ## Change Guardrails
 - Prefer extending existing package behavior over replacing working flows.
@@ -31,4 +41,3 @@ binary_sensor.doorbell_ringing
 ## Compatibility
 - Existing entity IDs are preserved where practical
 - Legacy script call path script.hip_log_event remains available
-
