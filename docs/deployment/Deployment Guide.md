@@ -1,76 +1,78 @@
 # HIP Deployment Guide
 
 ## Purpose
-This guide covers the hardened deployment workflow for HIP v2.5.4.
+This guide covers HIP v2.5.5 external configuration architecture.
 
-## Initial setup
-1. Ensure Docker, curl, and git are installed on the deployment machine.
-2. Ensure the Home Assistant container exists and is running.
-3. Ensure this repository is cloned locally.
+## Stateless repository model
+The repository must not contain machine-specific values or secrets.
 
-## Create development configuration
-1. Copy `config/dev.env.example` to `config/dev.env`.
-2. Edit `config/dev.env` and set:
+Repository files:
+1. `config/dev.env.example`
+2. `config/prod.env.example`
+
+Local machine files:
+1. `/mnt/apps/configs/hip/dev.env`
+2. `/mnt/apps/configs/hip/prod.env`
+
+## Configuration source resolution
+Deployment scripts resolve configuration in this order:
+1. `HIP_CONFIG_DIR` environment variable
+2. Default `/mnt/apps/configs/hip`
+3. Fail with a clear error when configuration cannot be created or accessed
+
+Scripts never load deployment secrets from repository env files.
+
+## First run behavior
+If the target configuration file does not exist:
+1. Scripts create `/mnt/apps/configs/hip` (or `HIP_CONFIG_DIR`).
+2. Scripts copy from `config/*.env.example`.
+3. Scripts print a setup message and exit successfully.
+
+Development first run message:
+1. `Development configuration created.`
+2. `Please edit: /mnt/apps/configs/hip/dev.env before deploying.`
+
+Production first run message:
+1. `Production configuration created.`
+2. `Please edit: /mnt/apps/configs/hip/prod.env before deploying.`
+
+## Migration from repository-based configuration
+If legacy files still exist in the repository:
+1. `config/dev.env`
+2. `config/prod.env`
+
+Scripts automatically migrate them to external location when the target external file does not yet exist:
+1. Move `config/dev.env` to `/mnt/apps/configs/hip/dev.env`.
+2. Move `config/prod.env` to `/mnt/apps/configs/hip/prod.env`.
+3. Print a migration warning.
+
+## Creating and editing local configuration
+1. Run `./deploy-dev.sh` or `./deploy-prod.sh` once to auto-generate the local file.
+2. Edit the generated local env file.
+3. Set required values:
    - `HIP_CONTAINER_NAME`
    - `HIP_HA_URL`
    - `HIP_HA_TOKEN`
-3. Keep `config/dev.env` local. It is ignored by git.
+4. Optionally set:
+   - `HIP_GIT_PULL`
+   - `HIP_REQUIRE_CLEAN_TREE`
+   - `HIP_CONFIRM_DEPLOYMENT`
+   - `HIP_REPOSITORY`
+   - `HIP_CONFIG_PATH`
 
-## Create production configuration
-1. Copy `config/prod.env.example` to `config/prod.env`.
-2. Edit `config/prod.env` and set production values.
-3. Keep `config/prod.env` local. It is ignored by git.
+## Deployment commands
+Development:
+1. `./deploy-dev.sh`
 
-## Generate Home Assistant Long-Lived Token
-1. Open Home Assistant user profile.
-2. In Long-Lived Access Tokens, create a new token.
-3. Copy the token into `HIP_HA_TOKEN` in the matching env file.
+Production:
+1. `./deploy-prod.sh`
 
-## Run development deployment
-Use one command:
+## CLI modes
+### Version mode
+1. `./deploy-dev.sh --version`
+2. `./deploy-prod.sh --version`
 
-`./deploy-dev.sh`
-
-The script will:
-1. Load `config/dev.env`.
-2. Validate prerequisites and configuration.
-3. Apply git checks and optional pull.
-4. Back up current HIP files.
-5. Deploy repository runtime files.
-6. Restart Home Assistant.
-7. Wait for startup.
-8. Run `hip.validate` and `hip.run_smoke_tests` when available.
-9. Print a colorized deployment summary and report location.
-
-## Run production deployment
-Use one command:
-
-`./deploy-prod.sh`
-
-Production-specific behavior:
-1. Dirty git tree aborts deployment.
-2. Preflight failures abort deployment.
-
-## Dry-run
-Use:
-
-`./deploy-dev.sh --dry-run`
-`./deploy-prod.sh --dry-run`
-
-Dry-run:
-1. Loads configuration.
-2. Runs full preflight validation.
-3. Prints every planned deployment action.
-4. Exits successfully without asking for confirmation.
-5. Does not create backups, copy files, restart containers, or call Home Assistant services.
-
-## Version mode
-Use:
-
-`./deploy-dev.sh --version`
-`./deploy-prod.sh --version`
-
-This loads configuration, prints deployment metadata, and exits immediately:
+Outputs:
 1. HIP Version
 2. Git Commit
 3. Branch
@@ -80,11 +82,11 @@ This loads configuration, prints deployment metadata, and exits immediately:
 7. Home Assistant URL
 8. Configuration file
 
-## Doctor mode
-Use:
+The command exits immediately after printing.
 
-`./deploy-dev.sh --doctor`
-`./deploy-prod.sh --doctor`
+### Doctor mode
+1. `./deploy-dev.sh --doctor`
+2. `./deploy-prod.sh --doctor`
 
 Doctor verifies:
 1. Repository
@@ -97,35 +99,67 @@ Doctor verifies:
 8. Runtime directories
 9. Permissions
 
-Doctor output ends with:
-1. `READY TO DEPLOY` when all checks pass.
-2. `FAILED` plus a full issue list when one or more checks fail.
+Doctor includes:
+1. `Configuration Source` with full external env file path.
 
-## Rollback
-Development rollback:
+Final status:
+1. `READY TO DEPLOY`
+2. `FAILED` with all detected issues listed
 
-`tools/rollback-dev.sh`
+### Dry run
+1. `./deploy-dev.sh --dry-run`
+2. `./deploy-prod.sh --dry-run`
 
-Production rollback:
+Dry run:
+1. Loads configuration.
+2. Runs preflight validation.
+3. Prints planned actions.
+4. Exits successfully.
 
-`tools/rollback-prod.sh`
+Dry run does not:
+1. Ask for confirmation.
+2. Create backups.
+3. Copy files.
+4. Restart containers.
+5. Call Home Assistant services.
 
-Each rollback:
-1. Restores latest backup for the target.
-2. Restarts Home Assistant.
-3. Runs validation and smoke tests when available.
-4. Prints rollback duration and report location.
+## Rollback and validation commands
+1. `tools/rollback-dev.sh`
+2. `tools/rollback-prod.sh`
+3. `tools/validate.sh`
 
-## Troubleshooting
-- If config file is missing:
-  - Scripts create it from the example and exit.
-  - Edit the generated file and rerun.
-- If token is missing:
-  - Set `HIP_HA_TOKEN` in the target env file.
-- If Home Assistant services are not available yet:
-  - Scripts print:
-    - `HIP services not available yet.`
-    - `Skipping validation.`
-  - Deployment continues.
-- If production deployment aborts on dirty tree:
-  - Commit or stash local changes, then rerun.
+These scripts use the same external configuration loader.
+
+## Back up deployment configuration
+Back up external env files outside git:
+1. `/mnt/apps/configs/hip/dev.env`
+2. `/mnt/apps/configs/hip/prod.env`
+
+Recommended backup locations:
+1. Encrypted NAS share
+2. Secret manager export
+3. Offline secure backup
+
+## Multiple NAS installations
+For multiple hosts, use one config directory per installation and set `HIP_CONFIG_DIR` per shell/session.
+
+Examples:
+1. `HIP_CONFIG_DIR=/mnt/apps/configs/hip-site-a ./deploy-prod.sh`
+2. `HIP_CONFIG_DIR=/mnt/apps/configs/hip-site-b ./deploy-prod.sh`
+
+## Development vs production recommendations
+Development defaults:
+1. `HIP_REQUIRE_CLEAN_TREE=false`
+2. `HIP_CONFIRM_DEPLOYMENT=true`
+
+Production defaults:
+1. `HIP_REQUIRE_CLEAN_TREE=true`
+2. `HIP_CONFIRM_DEPLOYMENT=true`
+
+## Security reminders
+Never commit:
+1. Tokens
+2. URLs tied to private infrastructure
+3. Container names unique to host environments
+4. Local filesystem paths
+5. Machine-specific repository locations

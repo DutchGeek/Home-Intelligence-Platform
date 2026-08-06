@@ -10,7 +10,13 @@ HIP_WAIT_TIMEOUT="${HIP_WAIT_TIMEOUT:-300}"
 HIP_GIT_REMOTE="${HIP_GIT_REMOTE:-origin}"
 HIP_GIT_BRANCH="${HIP_GIT_BRANCH:-main}"
 HIP_GIT_PULL="${HIP_GIT_PULL:-true}"
+HIP_REQUIRE_CLEAN_TREE="${HIP_REQUIRE_CLEAN_TREE:-false}"
 HIP_CONFIRM_DEPLOYMENT="${HIP_CONFIRM_DEPLOYMENT:-true}"
+HIP_CONFIG_PATH="${HIP_CONFIG_PATH:-/config}"
+HIP_RUNTIME_CONFIG_DIR="/config"
+HIP_CONFIG_DIR="${HIP_CONFIG_DIR:-}"
+HIP_DEFAULT_CONFIG_DIR="/mnt/apps/configs/hip"
+HIP_CONFIGURATION_SOURCE=""
 HIP_DRY_RUN="false"
 HIP_CONFIGURATION_FILE=""
 
@@ -109,16 +115,21 @@ hip_format_duration() {
 
 hip_load_configuration() {
   local target="$1"
-  local env_rel example_rel env_file example_file
+  local legacy_rel external_name example_rel legacy_file external_config_dir env_file example_file
+  local creation_label
 
   case "$target" in
     development)
-      env_rel="config/dev.env"
+      legacy_rel="config/dev.env"
+      external_name="dev.env"
       example_rel="config/dev.env.example"
+      creation_label="Development"
       ;;
     production)
-      env_rel="config/prod.env"
+      legacy_rel="config/prod.env"
+      external_name="prod.env"
       example_rel="config/prod.env.example"
+      creation_label="Production"
       ;;
     *)
       hip_log_error "unsupported deployment target: $target"
@@ -126,26 +137,64 @@ hip_load_configuration() {
       ;;
   esac
 
-  env_file="${HIP_REPO_ROOT}/${env_rel}"
+  if [ -n "${HIP_CONFIG_DIR}" ]; then
+    external_config_dir="${HIP_CONFIG_DIR}"
+  else
+    external_config_dir="${HIP_DEFAULT_CONFIG_DIR}"
+  fi
+
+  if [ -z "${external_config_dir}" ]; then
+    hip_log_error "configuration directory is not set; use HIP_CONFIG_DIR or ensure default /mnt/apps/configs/hip is available"
+    exit 1
+  fi
+
+  legacy_file="${HIP_REPO_ROOT}/${legacy_rel}"
+  env_file="${external_config_dir}/${external_name}"
   example_file="${HIP_REPO_ROOT}/${example_rel}"
+
+  if [ -f "${legacy_file}" ] && [ ! -f "${env_file}" ]; then
+    if ! mkdir -p "${external_config_dir}"; then
+      hip_log_error "unable to create external configuration directory: ${external_config_dir}"
+      exit 1
+    fi
+    if ! mv "${legacy_file}" "${env_file}"; then
+      hip_log_error "failed to migrate ${legacy_rel} to ${env_file}"
+      exit 1
+    fi
+    hip_log_warn "migrated legacy repository configuration ${legacy_rel} to ${env_file}"
+  fi
 
   if [ ! -f "${env_file}" ]; then
     if [ ! -f "${example_file}" ]; then
       hip_log_error "missing example configuration file: ${example_rel}"
       exit 1
     fi
-    cp "${example_file}" "${env_file}"
-    hip_log_warn "created ${env_rel} from ${example_rel}"
-    printf 'Please edit %s before deploying.\n' "${env_rel}"
+
+    if ! mkdir -p "${external_config_dir}"; then
+      hip_log_error "unable to create external configuration directory: ${external_config_dir}"
+      exit 1
+    fi
+
+    if ! cp "${example_file}" "${env_file}"; then
+      hip_log_error "failed to create configuration file: ${env_file}"
+      exit 1
+    fi
+
+    printf '%s configuration created.\n\nPlease edit:\n\n%s\n\nbefore deploying.\n' "${creation_label}" "${env_file}"
     exit 0
   fi
 
-  HIP_CONFIGURATION_FILE="${env_rel}"
-  hip_log_info "loading configuration from ${env_rel}"
+  HIP_CONFIGURATION_FILE="${env_file}"
+  HIP_CONFIGURATION_SOURCE="${env_file}"
+  hip_log_info "loading configuration from ${env_file}"
   set -a
   # shellcheck disable=SC1090
   . "${env_file}"
   set +a
+
+  if [ -n "${HIP_REPOSITORY:-}" ]; then
+    HIP_REPO_ROOT="${HIP_REPOSITORY}"
+  fi
 
   HIP_DEPLOY_TARGET="${target}"
 }
@@ -190,6 +239,13 @@ hip_git_is_clean() {
 
 hip_git_check_target_policy() {
   local target="$1"
+
+  if [ "${HIP_REQUIRE_CLEAN_TREE}" = "true" ] && ! hip_git_is_clean; then
+    hip_log_error "dirty git working tree is not allowed because HIP_REQUIRE_CLEAN_TREE=true"
+    git -C "${HIP_REPO_ROOT}" status --short
+    exit 1
+  fi
+
   if hip_git_is_clean; then
     hip_log_ok "git working tree is clean"
     return 0
@@ -254,11 +310,11 @@ hip_validate_paths_and_runtime() {
   fi
 
   if docker inspect "${HIP_CONTAINER_NAME}" >/dev/null 2>&1; then
-    if ! docker exec "${HIP_CONTAINER_NAME}" sh -c "test -d /config" >/dev/null 2>&1; then
-      errors+=("Configuration directory does not exist in container ${HIP_CONTAINER_NAME}: /config")
+    if ! docker exec "${HIP_CONTAINER_NAME}" sh -c "test -d ${HIP_RUNTIME_CONFIG_DIR}" >/dev/null 2>&1; then
+      errors+=("Configuration directory does not exist in container ${HIP_CONTAINER_NAME}: ${HIP_RUNTIME_CONFIG_DIR}")
     fi
-    if ! docker exec "${HIP_CONTAINER_NAME}" sh -c "test -w /config" >/dev/null 2>&1; then
-      errors+=("Configuration directory is not writable in container ${HIP_CONTAINER_NAME}: /config")
+    if ! docker exec "${HIP_CONTAINER_NAME}" sh -c "test -w ${HIP_RUNTIME_CONFIG_DIR}" >/dev/null 2>&1; then
+      errors+=("Configuration directory is not writable in container ${HIP_CONTAINER_NAME}: ${HIP_RUNTIME_CONFIG_DIR}")
     fi
   fi
 
@@ -501,7 +557,7 @@ hip_print_deployment_summary() {
   printf '%bDeployment Target:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_DEPLOY_TARGET}"
   printf '%bContainer:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_CONTAINER_NAME}"
   printf '%bRepository:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_REPO_ROOT}"
-  printf '%bConfiguration Path:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_CONFIGURATION_FILE}"
+  printf '%bConfiguration Path:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_CONFIGURATION_SOURCE}"
   printf '%bValidation:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_VALIDATION_STATUS}"
   printf '%bSmoke Tests:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_SMOKE_STATUS}"
   printf '%bDeployment Duration:%b %s\n' "${C_BOLD}" "${C_RESET}" "${duration}"
@@ -523,7 +579,7 @@ hip_print_version_info() {
   printf '%bDeployment Target:%b %s\n' "${C_BOLD}" "${C_RESET}" "${target}"
   printf '%bContainer:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_CONTAINER_NAME:-unset}"
   printf '%bHome Assistant URL:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_HA_URL:-unset}"
-  printf '%bConfiguration file:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_CONFIGURATION_FILE}"
+  printf '%bConfiguration file:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_CONFIGURATION_SOURCE}"
 }
 
 hip_print_dry_run_plan() {
@@ -541,11 +597,13 @@ hip_print_dry_run_plan() {
 
 hip_run_doctor() {
   local issues=()
-  local config_full_path="${HIP_REPO_ROOT}/${HIP_CONFIGURATION_FILE}"
+  local config_full_path="${HIP_CONFIGURATION_SOURCE}"
 
   printf '%b==== HIP Deployment Doctor ====%b\n' "${C_BOLD}${C_CYAN}" "${C_RESET}"
 
   printf '%bRepository:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_REPO_ROOT}"
+  printf '%bConfiguration Source:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_CONFIGURATION_SOURCE}"
+
   if [ -d "${HIP_REPO_ROOT}" ] && git -C "${HIP_REPO_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     hip_log_ok "Repository"
   else
@@ -593,7 +651,7 @@ hip_run_doctor() {
     hip_log_ok "Token configured"
   else
     hip_log_error "Token configured"
-    issues+=("HIP_HA_TOKEN is empty in ${HIP_CONFIGURATION_FILE}")
+    issues+=("HIP_HA_TOKEN is empty in ${HIP_CONFIGURATION_SOURCE}")
   fi
 
   printf '%bHome Assistant URL:%b %s\n' "${C_BOLD}" "${C_RESET}" "${HIP_HA_URL:-unset}"
@@ -606,18 +664,18 @@ hip_run_doctor() {
   fi
 
   if hip_has_command docker && [ -n "${HIP_CONTAINER_NAME}" ] && docker inspect "${HIP_CONTAINER_NAME}" >/dev/null 2>&1; then
-    if docker exec "${HIP_CONTAINER_NAME}" sh -c "test -d /config && test -d /config/.storage" >/dev/null 2>&1; then
+    if docker exec "${HIP_CONTAINER_NAME}" sh -c "test -d ${HIP_RUNTIME_CONFIG_DIR} && test -d ${HIP_RUNTIME_CONFIG_DIR}/.storage" >/dev/null 2>&1; then
       hip_log_ok "Runtime directories"
     else
       hip_log_error "Runtime directories"
-      issues+=("Runtime directories missing in container ${HIP_CONTAINER_NAME}: /config or /config/.storage")
+      issues+=("Runtime directories missing in container ${HIP_CONTAINER_NAME}: ${HIP_RUNTIME_CONFIG_DIR} or ${HIP_RUNTIME_CONFIG_DIR}/.storage")
     fi
 
-    if docker exec "${HIP_CONTAINER_NAME}" sh -c "test -w /config && test -w /config/.storage" >/dev/null 2>&1; then
+    if docker exec "${HIP_CONTAINER_NAME}" sh -c "test -w ${HIP_RUNTIME_CONFIG_DIR} && test -w ${HIP_RUNTIME_CONFIG_DIR}/.storage" >/dev/null 2>&1; then
       hip_log_ok "Permissions"
     else
       hip_log_error "Permissions"
-      issues+=("Insufficient write permissions for /config or /config/.storage in container ${HIP_CONTAINER_NAME}")
+      issues+=("Insufficient write permissions for ${HIP_RUNTIME_CONFIG_DIR} or ${HIP_RUNTIME_CONFIG_DIR}/.storage in container ${HIP_CONTAINER_NAME}")
     fi
   else
     hip_log_warn "Runtime directories (skipped: container unavailable)"

@@ -1,6 +1,6 @@
 # Home Intelligence Platform (HIP)
 
-Version: 2.5.3
+Version: 2.5.5
 
 A modular, event-driven Home Assistant platform.
 
@@ -75,11 +75,15 @@ A modular, event-driven Home Assistant platform.
 	- `rollback-prod.sh`
 	- `validate.sh`
 
-## v2.5.2 Deployment Experience
-- Added deployment configuration files:
-	- `config/dev.env`
-	- `config/prod.env`
-- Deployment scripts now auto-load environment configuration by target
+## v2.5.5 External Configuration Architecture
+- Repository is stateless for deployment secrets and machine-specific settings
+- Repository keeps only templates:
+	- `config/dev.env.example`
+	- `config/prod.env.example`
+- Real deployment configuration is loaded from:
+	- `/mnt/apps/configs/hip/dev.env`
+	- `/mnt/apps/configs/hip/prod.env`
+- Deployment scripts support legacy migration from repository config files on first run
 - Added git safety checks and optional `git pull --ff-only` support
 - Added interactive deployment confirmation (configurable)
 - Added colored output, progress indicators, and duration reporting

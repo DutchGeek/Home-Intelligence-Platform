@@ -76,12 +76,22 @@ def test_required_deployment_env_files_exist() -> None:
         assert env_path.exists()
         content = env_path.read_text(encoding="utf-8")
         assert "HIP_HA_TOKEN=" in content
+        assert "HIP_REPOSITORY=" in content
+        assert "HIP_CONFIG_PATH=" in content
+        assert "HIP_REQUIRE_CLEAN_TREE=" in content
 
 
 def test_gitignore_excludes_machine_specific_env_files() -> None:
     ignore_content = (ROOT / ".gitignore").read_text(encoding="utf-8")
     assert "config/dev.env" in ignore_content
     assert "config/prod.env" in ignore_content
+    assert "/mnt/apps/configs/hip/" in ignore_content
+
+
+def test_deployment_library_uses_external_configuration_directory() -> None:
+    content = (TOOLS / "lib-hip-deploy.sh").read_text(encoding="utf-8")
+    assert "HIP_DEFAULT_CONFIG_DIR=\"/mnt/apps/configs/hip\"" in content
+    assert "HIP_CONFIG_DIR" in content
 
 
 def test_root_deploy_wrappers_exist() -> None:
