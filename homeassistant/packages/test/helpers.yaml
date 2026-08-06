@@ -1,0 +1,43 @@
+input_boolean:
+  hip_test_enabled:
+    name: HIP Test Enabled
+    initial: true
+
+input_select:
+  hip_test_scenario:
+    name: HIP Test Scenario
+    options:
+      - doorbell_pressed
+      - motion_detected
+      - camera_unavailable
+      - piper_unavailable
+      - notification_unavailable
+      - replay_last_event
+    initial: doorbell_pressed
+
+input_text:
+  hip_test_last_event_id:
+    name: HIP Test Last Event ID
+    max: 64
+
+  hip_test_last_event_type:
+    name: HIP Test Last Event Type
+    max: 64
+
+  hip_test_last_event_source:
+    name: HIP Test Last Event Source
+    max: 128
+
+  hip_test_last_event_message:
+    name: HIP Test Last Event Message
+    max: 255
+
+  hip_test_last_result:
+    name: HIP Test Last Result
+    max: 255
+
+input_datetime:
+  hip_test_last_run_at:
+    name: HIP Test Last Run At
+    has_date: true
+    has_time: true

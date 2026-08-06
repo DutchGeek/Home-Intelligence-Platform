@@ -16,13 +16,13 @@ hip_require_token
 START_EPOCH="$(hip_epoch_now)"
 
 hip_progress 1 3 "Preparing deployment state directories"
+hip_validate_paths_and_runtime
 hip_ensure_state_directories
 
 TIMESTAMP="$(hip_timestamp_now)"
 
 hip_progress 2 3 "Running validation and smoke tests"
-VALIDATE_RESULT="$(hip_call_service hip/validate '{}')"
-SMOKE_RESULT="$(hip_call_service hip/run_smoke_tests '{}')"
+hip_run_validation_pipeline
 
 CURRENT_VERSION="$(tr -d '[:space:]' < "${HIP_REPO_ROOT}/VERSION")"
 BACKUP_PATH="$(hip_latest_backup_for_target "${TARGET}")"
@@ -39,18 +39,18 @@ Action: validate
 Version: ${CURRENT_VERSION}
 
 Validation Result:
-${VALIDATE_RESULT}
+${HIP_VALIDATE_RESULT:-Skipped}
 
 Smoke Test Result:
-${SMOKE_RESULT}
+${HIP_SMOKE_RESULT:-Skipped}
 EOF
 
 REPORT_PATH="$(hip_write_status_and_report validated "${CURRENT_VERSION}" "${BACKUP_PATH}" "${REPORT_TMP}" "${TIMESTAMP}")"
 
 ELAPSED="$(($(hip_epoch_now) - START_EPOCH))"
 
-hip_print_validation_summary "${VALIDATE_RESULT}"
-hip_print_smoke_summary "${SMOKE_RESULT}"
+hip_print_validation_summary
+hip_print_smoke_summary
 
 printf '%s\n' "===== HIP VALIDATION REPORT ====="
 cat "${REPORT_TMP}"

@@ -1,0 +1,161 @@
+script:
+  hip_test_log:
+    alias: HIP Test Log
+    mode: queued
+    fields:
+      scenario:
+        required: true
+      event_id:
+        required: false
+      event_type:
+        required: false
+      source:
+        required: false
+      message:
+        required: false
+      result:
+        required: false
+    sequence:
+      - action: input_text.set_value
+        target:
+          entity_id: "{{ states('input_text.hip_registry_test_last_event_id_entity') }}"
+        data:
+          value: "{{ event_id | default('', true) }}"
+      - action: input_text.set_value
+        target:
+          entity_id: "{{ states('input_text.hip_registry_test_last_event_type_entity') }}"
+        data:
+          value: "{{ event_type | default(scenario, true) }}"
+      - action: input_text.set_value
+        target:
+          entity_id: "{{ states('input_text.hip_registry_test_last_event_source_entity') }}"
+        data:
+          value: "{{ source | default('test.harness', true) }}"
+      - action: input_text.set_value
+        target:
+          entity_id: "{{ states('input_text.hip_registry_test_last_event_message_entity') }}"
+        data:
+          value: "{{ message | default('', true) }}"
+      - action: input_text.set_value
+        target:
+          entity_id: "{{ states('input_text.hip_registry_test_last_result_entity') }}"
+        data:
+          value: "{{ result | default('recorded', true) }}"
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: "{{ states('input_text.hip_registry_test_last_run_at_entity') }}"
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      - action: logbook.log
+        data:
+          name: HIP Test
+          message: >-
+            scenario={{ scenario }}, event_type={{ event_type | default(scenario, true) }},
+            result={{ result | default('recorded', true) }}
+
+  hip_test_generate_event:
+    alias: HIP Test Generate Event
+    mode: queued
+    fields:
+      scenario:
+        required: true
+      event_type:
+        required: false
+      source:
+        required: false
+      message:
+        required: false
+      result:
+        required: false
+    sequence:
+      - variables:
+          resolved_event_id: >-
+            {{ 'hip-test-' ~ now().strftime('%Y%m%d%H%M%S%f') }}
+          resolved_event_type: >-
+            {{ event_type | default(scenario, true) }}
+          resolved_source: >-
+            {{ source | default('test.harness', true) }}
+          resolved_message: >-
+            {{ message | default('HIP test event', true) }}
+      - action: script.hip_test_log
+        data:
+          scenario: "{{ scenario }}"
+          event_id: "{{ resolved_event_id }}"
+          event_type: "{{ resolved_event_type }}"
+          source: "{{ resolved_source }}"
+          message: "{{ resolved_message }}"
+          result: "{{ result | default('generated', true) }}"
+      - event: hip_test_run
+        event_data:
+          scenario: "{{ scenario }}"
+          event_id: "{{ resolved_event_id }}"
+          event_type: "{{ resolved_event_type }}"
+          source: "{{ resolved_source }}"
+          message: "{{ resolved_message }}"
+
+  hip_test_replay_last_event:
+    alias: HIP Test Replay Last Event
+    mode: queued
+    sequence:
+      - action: script.hip_test_generate_event
+        data:
+          scenario: "{{ states('input_select.hip_test_scenario') if states('input_select.hip_test_scenario') != 'replay_last_event' else 'replay_last_event' }}"
+          event_type: "{{ states('input_text.hip_test_last_event_type') }}"
+          source: "{{ states('input_text.hip_test_last_event_source') }}"
+          message: "{{ states('input_text.hip_test_last_event_message') }}"
+          result: replayed
+
+  hip_test_simulate_doorbell_pressed:
+    alias: HIP Test Simulate Doorbell Pressed
+    mode: queued
+    sequence:
+      - action: script.hip_test_generate_event
+        data:
+          scenario: doorbell_pressed
+          event_type: doorbell_pressed
+          source: test.doorbell
+          message: Test doorbell pressed
+
+  hip_test_simulate_motion_detected:
+    alias: HIP Test Simulate Motion Detected
+    mode: queued
+    sequence:
+      - action: script.hip_test_generate_event
+        data:
+          scenario: motion_detected
+          event_type: motion_detected
+          source: test.motion
+          message: Test motion detected
+
+  hip_test_simulate_camera_unavailable:
+    alias: HIP Test Simulate Camera Unavailable
+    mode: queued
+    sequence:
+      - action: script.hip_test_generate_event
+        data:
+          scenario: camera_unavailable
+          event_type: camera_unavailable
+          source: test.camera
+          message: Test camera unavailable
+
+  hip_test_simulate_piper_unavailable:
+    alias: HIP Test Simulate Piper Unavailable
+    mode: queued
+    sequence:
+      - action: script.hip_test_generate_event
+        data:
+          scenario: piper_unavailable
+          event_type: piper_unavailable
+          source: test.media
+          message: Test Piper unavailable
+
+  hip_test_simulate_notification_unavailable:
+    alias: HIP Test Simulate Notification Unavailable
+    mode: queued
+    sequence:
+      - action: script.hip_test_generate_event
+        data:
+          scenario: notification_unavailable
+          event_type: notification_unavailable
+          source: test.notification
+          message: Test notification unavailable

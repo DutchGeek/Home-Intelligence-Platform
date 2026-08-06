@@ -38,8 +38,8 @@ REQUIRED_DEPLOYMENT_SCRIPTS = {
 }
 
 REQUIRED_DEPLOYMENT_ENV_FILES = {
-    "dev.env",
-    "prod.env",
+    "dev.env.example",
+    "prod.env.example",
 }
 
 
@@ -47,7 +47,7 @@ def test_manifest_declares_config_flow_and_domain() -> None:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     assert manifest["domain"] == "hip"
     assert manifest["config_flow"] is True
-    assert manifest["version"] == "2.5.1"
+    assert manifest["version"] == "2.5.3"
 
 
 def test_services_yaml_contains_required_service_names() -> None:
@@ -76,6 +76,12 @@ def test_required_deployment_env_files_exist() -> None:
         assert env_path.exists()
         content = env_path.read_text(encoding="utf-8")
         assert "HIP_HA_TOKEN=" in content
+
+
+def test_gitignore_excludes_machine_specific_env_files() -> None:
+    ignore_content = (ROOT / ".gitignore").read_text(encoding="utf-8")
+    assert "config/dev.env" in ignore_content
+    assert "config/prod.env" in ignore_content
 
 
 def test_root_deploy_wrappers_exist() -> None:

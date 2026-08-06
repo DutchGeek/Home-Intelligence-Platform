@@ -14,3 +14,13 @@
 - [ ] Snapshot file is created at /config/www/snapshots/front_door_latest.jpg
 - [ ] Last event contract version is hip.event.v1
 - [ ] Last event artifact public path is /local/snapshots/front_door_latest.jpg
+- [ ] Event history helper updates after a completed event
+- [ ] HIP Inspector entities show the latest runtime contract state
+- [ ] Snapshot Viewer card loads in the dashboard
+- [ ] Runtime Metrics reflect the latest event total and timestamp
+- [ ] Operational Dashboard opens without errors
+- [ ] Visitor timeline entries update after a completed event
+- [ ] Snapshot history entries update with retained snapshot references
+- [ ] Event detail answers who, when, what, notified, announced, and snapshot captured
+- [ ] Daily visitor statistics increment after a completed event
+- [ ] Daily statistics reset when the event day changes

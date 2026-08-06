@@ -23,15 +23,28 @@ script:
         required: false
       snapshot_file:
         required: false
+      history_snapshot_file:
+        required: false
     sequence:
       - variables:
           resolved_camera_entity: >-
-            {{ camera_entity | default(states('input_text.hip_front_door_camera'), true) }}
+            {{ camera_entity | default(states('input_text.hip_registry_front_door_camera_entity'), true) }}
           resolved_snapshot_file: >-
-            {{ snapshot_file | default(artifact_path, true) | default('/config/www/snapshots/front_door_latest.jpg', true) }}
+            {{ snapshot_file | default(artifact_path, true) | default(states(states('input_text.hip_registry_snapshot_artifact_path_entity')), true) | default('/config/www/snapshots/front_door_latest.jpg', true) }}
+          resolved_history_snapshot_file: >-
+            {{ history_snapshot_file | default('', true) }}
       - condition: template
         value_template: "{{ resolved_camera_entity is string and resolved_camera_entity.startswith('camera.') }}"
       - action: camera.snapshot
         data:
           entity_id: "{{ resolved_camera_entity }}"
           filename: "{{ resolved_snapshot_file }}"
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ resolved_history_snapshot_file != '' }}"
+            sequence:
+              - action: camera.snapshot
+                data:
+                  entity_id: "{{ resolved_camera_entity }}"
+                  filename: "{{ resolved_history_snapshot_file }}"

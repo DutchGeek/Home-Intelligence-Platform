@@ -16,6 +16,7 @@ hip_progress 1 7 "Requesting rollback confirmation"
 hip_confirm_or_abort "Rollback HIP in production container '${HIP_CONTAINER_NAME}'?"
 
 hip_progress 2 7 "Preparing deployment state directories"
+hip_validate_paths_and_runtime
 hip_ensure_state_directories
 
 TIMESTAMP="$(hip_timestamp_now)"
@@ -37,8 +38,7 @@ hip_progress 6 7 "Waiting for Home Assistant startup"
 hip_wait_for_home_assistant "${HIP_WAIT_TIMEOUT}"
 
 hip_progress 7 7 "Running validation and smoke tests"
-VALIDATE_RESULT="$(hip_call_service hip/validate '{}')"
-SMOKE_RESULT="$(hip_call_service hip/run_smoke_tests '{}')"
+hip_run_validation_pipeline
 
 ROLLED_BACK_VERSION="unknown"
 METADATA_TMP="$(mktemp)"
@@ -58,18 +58,18 @@ Action: rollback
 Version: ${ROLLED_BACK_VERSION}
 
 Validation Result:
-${VALIDATE_RESULT}
+${HIP_VALIDATE_RESULT:-Skipped}
 
 Smoke Test Result:
-${SMOKE_RESULT}
+${HIP_SMOKE_RESULT:-Skipped}
 EOF
 
 REPORT_PATH="$(hip_write_status_and_report rolled_back "${ROLLED_BACK_VERSION}" "${BACKUP_PATH}" "${REPORT_TMP}" "${TIMESTAMP}")"
 
 ELAPSED="$(($(hip_epoch_now) - START_EPOCH))"
 
-hip_print_validation_summary "${VALIDATE_RESULT}"
-hip_print_smoke_summary "${SMOKE_RESULT}"
+hip_print_validation_summary
+hip_print_smoke_summary
 
 printf '%s\n' "===== HIP ROLLBACK REPORT ====="
 cat "${REPORT_TMP}"

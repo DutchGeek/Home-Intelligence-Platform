@@ -1,0 +1,155 @@
+input_text:
+  hip_registry_doorbell_sensor_entity:
+    name: HIP Registry Doorbell Sensor Entity
+    initial: binary_sensor.doorbell_ringing
+    max: 255
+
+  hip_registry_hip_enabled_entity:
+    name: HIP Registry HIP Enabled Entity
+    initial: input_boolean.hip_enabled
+    max: 255
+
+  hip_registry_last_event_entity:
+    name: HIP Registry Last Event Entity
+    initial: input_text.hip_last_event
+    max: 255
+
+  hip_registry_last_event_id_entity:
+    name: HIP Registry Last Event ID Entity
+    initial: input_text.hip_last_event_id
+    max: 255
+
+  hip_registry_last_event_type_entity:
+    name: HIP Registry Last Event Type Entity
+    initial: input_text.hip_last_event_type
+    max: 255
+
+  hip_registry_last_event_source_entity:
+    name: HIP Registry Last Event Source Entity
+    initial: input_text.hip_last_event_source
+    max: 255
+
+  hip_registry_last_event_contract_version_entity:
+    name: HIP Registry Last Event Contract Version Entity
+    initial: input_text.hip_last_event_contract_version
+    max: 255
+
+  hip_registry_last_event_lifecycle_entity:
+    name: HIP Registry Last Event Lifecycle Entity
+    initial: input_text.hip_last_event_lifecycle
+    max: 255
+
+  hip_registry_last_event_artifact_entity:
+    name: HIP Registry Last Event Artifact Entity
+    initial: input_text.hip_last_event_artifact
+    max: 255
+
+  hip_registry_last_event_artifact_public_entity:
+    name: HIP Registry Last Event Public Artifact Entity
+    initial: input_text.hip_last_event_artifact_public
+    max: 255
+
+  hip_registry_last_event_at_entity:
+    name: HIP Registry Last Event At Entity
+    initial: input_datetime.hip_last_event_at
+    max: 255
+
+  hip_registry_event_history_entity:
+    name: HIP Registry Event History Entity
+    initial: input_text.hip_event_history
+    max: 255
+
+  hip_registry_event_total_entity:
+    name: HIP Registry Event Total Entity
+    initial: input_number.hip_event_total
+    max: 255
+
+  hip_registry_snapshot_artifact_path_entity:
+    name: HIP Registry Snapshot Artifact Path Entity
+    initial: input_text.hip_snapshot_artifact_path
+    max: 255
+
+  hip_registry_snapshot_public_path_entity:
+    name: HIP Registry Snapshot Public Path Entity
+    initial: input_text.hip_snapshot_public_path
+    max: 255
+
+  hip_registry_artifact_retention_policy_entity:
+    name: HIP Registry Artifact Retention Policy Entity
+    initial: input_text.hip_artifact_retention_policy
+    max: 255
+
+  hip_registry_mobile_notify_service:
+    name: HIP Registry Mobile Notify Service
+    initial: notify.mobile_app_robins_iphone
+    max: 255
+
+  hip_registry_piper_tts_entity:
+    name: HIP Registry Piper TTS Entity
+    initial: tts.piper
+    max: 255
+
+  hip_registry_homepod_player_entity:
+    name: HIP Registry HomePod Player Entity
+    initial: media_player.living_room_homepod
+    max: 255
+
+  hip_registry_front_door_camera_entity:
+    name: HIP Registry Front Door Camera Entity
+    initial: camera.front_door
+    max: 255
+
+  hip_registry_test_enabled_entity:
+    name: HIP Registry Test Enabled Entity
+    initial: input_boolean.hip_test_enabled
+    max: 255
+
+  hip_registry_test_scenario_entity:
+    name: HIP Registry Test Scenario Entity
+    initial: input_select.hip_test_scenario
+    max: 255
+
+  hip_registry_test_last_event_id_entity:
+    name: HIP Registry Test Last Event ID Entity
+    initial: input_text.hip_test_last_event_id
+    max: 255
+
+  hip_registry_test_last_event_type_entity:
+    name: HIP Registry Test Last Event Type Entity
+    initial: input_text.hip_test_last_event_type
+    max: 255
+
+  hip_registry_test_last_event_source_entity:
+    name: HIP Registry Test Last Event Source Entity
+    initial: input_text.hip_test_last_event_source
+    max: 255
+
+  hip_registry_test_last_event_message_entity:
+    name: HIP Registry Test Last Event Message Entity
+    initial: input_text.hip_test_last_event_message
+    max: 255
+
+  hip_registry_test_last_result_entity:
+    name: HIP Registry Test Last Result Entity
+    initial: input_text.hip_test_last_result
+    max: 255
+
+  hip_registry_test_last_run_at_entity:
+    name: HIP Registry Test Last Run At Entity
+    initial: input_datetime.hip_test_last_run_at
+    max: 255
+
+  hip_registry_test_missing_camera_entity:
+    name: HIP Registry Test Missing Camera Entity
+    initial: camera.hip_test_missing
+    max: 255
+
+  hip_registry_test_missing_piper_entity:
+    name: HIP Registry Test Missing Piper Entity
+    initial: tts.hip_test_missing
+    max: 255
+
+  hip_registry_test_missing_notification_service:
+    name: HIP Registry Test Missing Notification Service
+    initial: notify.mobile_app_hip_test_missing
+    max: 255

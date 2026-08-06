@@ -8,6 +8,10 @@ input_text:
     name: HIP Last Event
     max: 255
 
+  hip_event_history:
+    name: HIP Event History
+    max: 255
+
   hip_last_event_id:
     name: HIP Last Event ID
     max: 64
@@ -57,3 +61,12 @@ input_datetime:
     name: HIP Last Event At
     has_date: true
     has_time: true
+
+input_number:
+  hip_event_total:
+    name: HIP Event Total
+    min: 0
+    max: 99999
+    step: 1
+    mode: box
+    initial: 0

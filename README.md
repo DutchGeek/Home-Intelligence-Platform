@@ -1,6 +1,6 @@
 # Home Intelligence Platform (HIP)
 
-Version: 2.5.2
+Version: 2.5.3
 
 A modular, event-driven Home Assistant platform.
 

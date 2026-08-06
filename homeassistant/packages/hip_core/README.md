@@ -32,3 +32,6 @@ The HIP Core package owns the event runtime.
 - Persist the latest event state
 - Manage artifact path ownership and retention policy
 - Dispatch subscribers without direct subscriber-to-subscriber communication
+- Record event history for the homeowner dashboard
+- Maintain runtime metrics for first-production release visibility
+- Resolve runtime targets from the Device Registry rather than hardcoding device identifiers

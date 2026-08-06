@@ -21,8 +21,36 @@ script:
         required: false
     sequence:
       - variables:
+          resolved_last_event_entity: >-
+            {{ states('input_text.hip_registry_last_event_entity') }}
+          resolved_last_event_id_entity: >-
+            {{ states('input_text.hip_registry_last_event_id_entity') }}
+          resolved_last_event_type_entity: >-
+            {{ states('input_text.hip_registry_last_event_type_entity') }}
+          resolved_last_event_source_entity: >-
+            {{ states('input_text.hip_registry_last_event_source_entity') }}
+          resolved_last_event_contract_version_entity: >-
+            {{ states('input_text.hip_registry_last_event_contract_version_entity') }}
+          resolved_last_event_lifecycle_entity: >-
+            {{ states('input_text.hip_registry_last_event_lifecycle_entity') }}
+          resolved_last_event_artifact_entity: >-
+            {{ states('input_text.hip_registry_last_event_artifact_entity') }}
+          resolved_last_event_artifact_public_entity: >-
+            {{ states('input_text.hip_registry_last_event_artifact_public_entity') }}
+          resolved_last_event_at_entity: >-
+            {{ states('input_datetime.hip_registry_last_event_at_entity') }}
+          resolved_event_history_entity: >-
+            {{ states('input_text.hip_registry_event_history_entity') }}
+          resolved_event_total_entity: >-
+            {{ states('input_number.hip_registry_event_total_entity') }}
+          resolved_snapshot_artifact_path_entity: >-
+            {{ states('input_text.hip_registry_snapshot_artifact_path_entity') }}
+          resolved_snapshot_public_path_entity: >-
+            {{ states('input_text.hip_registry_snapshot_public_path_entity') }}
+          resolved_artifact_retention_policy_entity: >-
+            {{ states('input_text.hip_registry_artifact_retention_policy_entity') }}
           resolved_contract_version: >-
-            {{ contract_version | default(states('input_text.hip_last_event_contract_version'), true) | default('hip.event.v1', true) }}
+            {{ contract_version | default(states(resolved_last_event_contract_version_entity), true) | default('hip.event.v1', true) }}
           resolved_event_type: >-
             {{ event_type | default('doorbell_pressed', true) }}
           resolved_source: >-
@@ -34,9 +62,13 @@ script:
           resolved_event_id: >-
             {{ event_id | default('hip-' ~ now().strftime('%Y%m%d%H%M%S%f'), true) }}
           resolved_artifact_path: >-
-            {{ artifact_path | default(states('input_text.hip_snapshot_artifact_path'), true) | default('/config/www/snapshots/front_door_latest.jpg', true) }}
+            {{ artifact_path | default(states(states('input_text.hip_registry_snapshot_artifact_path_entity')), true) | default('/config/www/snapshots/front_door_latest.jpg', true) }}
           resolved_artifact_public_path: >-
-            {{ artifact_public_path | default(states('input_text.hip_snapshot_public_path'), true) | default('/local/snapshots/front_door_latest.jpg', true) }}
+            {{ artifact_public_path | default(states(states('input_text.hip_registry_snapshot_public_path_entity')), true) | default('/local/snapshots/front_door_latest.jpg', true) }}
+          resolved_history_artifact_path: >-
+            {{ '/config/www/snapshots/history/' ~ resolved_event_id ~ '.jpg' }}
+          resolved_history_artifact_public_path: >-
+            {{ '/local/snapshots/history/' ~ resolved_event_id ~ '.jpg' }}
       - action: script.hip_event_persist
         data:
           event_id: "{{ resolved_event_id }}"
@@ -76,6 +108,7 @@ script:
           artifact_path: "{{ resolved_artifact_path }}"
           artifact_public_path: "{{ resolved_artifact_public_path }}"
           snapshot_file: "{{ resolved_artifact_path }}"
+          history_snapshot_file: "{{ resolved_history_artifact_path }}"
       - action: script.hip_event_persist
         data:
           event_id: "{{ resolved_event_id }}"
@@ -87,6 +120,17 @@ script:
           lifecycle: artifact_captured
           artifact_path: "{{ resolved_artifact_path }}"
           artifact_public_path: "{{ resolved_artifact_public_path }}"
+      - action: script.hip_record_visitor_event
+        data:
+          event_id: "{{ resolved_event_id }}"
+          contract_version: "{{ resolved_contract_version }}"
+          event_type: "{{ resolved_event_type }}"
+          source: "{{ resolved_source }}"
+          message: "{{ resolved_message }}"
+          occurred_at: "{{ resolved_occurred_at }}"
+          lifecycle: completed
+          artifact_path: "{{ resolved_history_artifact_path }}"
+          artifact_public_path: "{{ resolved_history_artifact_public_path }}"
       - action: script.hip_event_dispatch
         data:
           event_id: "{{ resolved_event_id }}"
@@ -135,49 +179,71 @@ script:
     sequence:
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_last_event
+          entity_id: "{{ states('input_text.hip_registry_last_event_entity') }}"
         data:
           value: "{{ message }}"
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_last_event_id
+          entity_id: "{{ states('input_text.hip_registry_last_event_id_entity') }}"
         data:
           value: "{{ event_id }}"
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_last_event_type
+          entity_id: "{{ states('input_text.hip_registry_last_event_type_entity') }}"
         data:
           value: "{{ event_type }}"
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_last_event_source
+          entity_id: "{{ states('input_text.hip_registry_last_event_source_entity') }}"
         data:
           value: "{{ source }}"
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_last_event_contract_version
+          entity_id: "{{ states('input_text.hip_registry_last_event_contract_version_entity') }}"
         data:
           value: "{{ contract_version }}"
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_last_event_lifecycle
+          entity_id: "{{ states('input_text.hip_registry_last_event_lifecycle_entity') }}"
         data:
           value: "{{ lifecycle }}"
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_last_event_artifact
+          entity_id: "{{ states('input_text.hip_registry_last_event_artifact_entity') }}"
         data:
           value: "{{ artifact_path | default('', true) }}"
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_last_event_artifact_public
+          entity_id: "{{ states('input_text.hip_registry_last_event_artifact_public_entity') }}"
         data:
           value: "{{ artifact_public_path | default('', true) }}"
       - action: input_datetime.set_datetime
         target:
-          entity_id: input_datetime.hip_last_event_at
+          entity_id: "{{ states('input_text.hip_registry_last_event_at_entity') }}"
         data:
           datetime: "{{ occurred_at }}"
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ lifecycle == 'completed' }}"
+            sequence:
+              - variables:
+                  resolved_event_history_entry: >-
+                    {{ occurred_at }} | {{ event_type }} | {{ source }} | {{ message }}
+                  resolved_event_history: >-
+                    {{ ([resolved_event_history_entry] + (states(resolved_event_history_entity).split('\n') if states(resolved_event_history_entity) not in ['unknown', 'unavailable', ''] else []))[:5] | join('\n') }}
+                  resolved_event_total: >-
+                    {{ states(resolved_event_total_entity) | float(0) + 1 }}
+              - action: input_text.set_value
+                target:
+                  entity_id: "{{ resolved_event_history_entity }}"
+                data:
+                  value: "{{ resolved_event_history }}"
+              - action: input_number.set_value
+                target:
+                  entity_id: "{{ resolved_event_total_entity }}"
+                data:
+                  value: "{{ resolved_event_total }}"
 
   hip_artifact_manager:
     alias: HIP Artifact Manager
@@ -194,8 +260,8 @@ script:
     sequence:
       - action: script.hip_retention_policy
         data:
-          artifact_path: "{{ artifact_path | default(states('input_text.hip_snapshot_artifact_path'), true) }}"
-          artifact_public_path: "{{ artifact_public_path | default(states('input_text.hip_snapshot_public_path'), true) }}"
+          artifact_path: "{{ artifact_path | default(states(states('input_text.hip_registry_snapshot_artifact_path_entity')), true) }}"
+          artifact_public_path: "{{ artifact_public_path | default(states(states('input_text.hip_registry_snapshot_public_path_entity')), true) }}"
 
   hip_retention_policy:
     alias: HIP Retention Policy
@@ -208,19 +274,19 @@ script:
     sequence:
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_artifact_retention_policy
+          entity_id: "{{ states('input_text.hip_registry_artifact_retention_policy_entity') }}"
         data:
           value: overwrite_latest
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_last_event_artifact
+          entity_id: "{{ states('input_text.hip_registry_last_event_artifact_entity') }}"
         data:
-          value: "{{ artifact_path | default(states('input_text.hip_snapshot_artifact_path'), true) }}"
+          value: "{{ artifact_path | default(states(states('input_text.hip_registry_snapshot_artifact_path_entity')), true) }}"
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_last_event_artifact_public
+          entity_id: "{{ states('input_text.hip_registry_last_event_artifact_public_entity') }}"
         data:
-          value: "{{ artifact_public_path | default(states('input_text.hip_snapshot_public_path'), true) }}"
+          value: "{{ artifact_public_path | default(states(states('input_text.hip_registry_snapshot_public_path_entity')), true) }}"
 
   hip_event_dispatch:
     alias: HIP Event Dispatch
@@ -309,7 +375,7 @@ script:
             {{ event | default(message, true) | default('HIP event', true) }}
       - action: input_text.set_value
         target:
-          entity_id: input_text.hip_last_event
+          entity_id: "{{ states('input_text.hip_registry_last_event_entity') }}"
         data:
           value: "{{ resolved_event }}"
       - action: logbook.log

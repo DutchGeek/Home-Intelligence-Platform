@@ -1,0 +1,31 @@
+services:
+  homeassistant:
+    image: ${HA_IMAGE:-ghcr.io/home-assistant/home-assistant:stable}
+    container_name: ${HA_CONTAINER_NAME:-hip-dev}
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-UTC}
+    ports:
+      - "${HA_PORT:-8123}:8123"
+    volumes:
+      - hip_dev_config:/config
+      - ./:/workspace:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+    command: |
+      set -eu
+      mkdir -p /config/homeassistant/packages
+      mkdir -p /config/www/snapshots
+      if [ ! -f /config/configuration.yaml ]; then
+        printf '%s\n' \
+          'default_config:' \
+          'homeassistant:' \
+          '  packages: !include_dir_named homeassistant/packages' \
+          > /config/configuration.yaml
+      fi
+      cp -R /workspace/homeassistant/packages/. /config/homeassistant/packages/
+      exec /init
+
+volumes:
+  hip_dev_config:

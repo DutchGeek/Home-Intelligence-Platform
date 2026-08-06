@@ -1,0 +1,12 @@
+script:
+  hip_device_registry_log:
+    alias: HIP Device Registry Log
+    mode: queued
+    fields:
+      message:
+        required: true
+    sequence:
+      - action: logbook.log
+        data:
+          name: HIP Device Registry
+          message: "{{ message }}"

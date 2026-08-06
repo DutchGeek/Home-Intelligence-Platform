@@ -13,6 +13,9 @@ Each package must own one primary responsibility.
 - Do not duplicate the same responsibility across multiple packages.
 - Shared helpers belong in the narrowest stable package that can own them.
 - Cross-package dependencies must be documented.
+- Packages communicate only through the Event Runtime.
+- Packages consume logical devices only.
+- Packages must never access entity IDs directly.
 - Reserved packages without implementation should be documented as reserved, not presented as complete.
 
 ## Acceptance Criteria

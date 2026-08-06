@@ -3,13 +3,13 @@ automation:
     id: hip_front_door_event
     mode: single
     trigger:
-      - platform: state
-        entity_id: binary_sensor.doorbell_ringing
-        to: "on"
+      - platform: template
+        value_template: >-
+          {{ is_state(states('input_text.hip_registry_doorbell_sensor_entity'), 'on') }}
     condition:
-      - condition: state
-        entity_id: input_boolean.hip_enabled
-        state: "on"
+      - condition: template
+        value_template: >-
+          {{ is_state(states('input_text.hip_registry_hip_enabled_entity'), 'on') }}
     action:
       - action: script.hip_event_manager
         data:

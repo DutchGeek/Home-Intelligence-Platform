@@ -16,11 +16,12 @@ binary_sensor.doorbell_ringing
 - Logging subscriber
 
 ## Package Responsibilities
-- HIP Core: event manager, persistence, lifecycle, artifact management, and logging
+- HIP Core: Kernel runtime, event manager, persistence, lifecycle, artifact management, and logging
 - Security: trigger detection and event manager entrypoint
 - Notifications: mobile notification subscriber implementation
 - Media: Piper HomePod announcement subscriber implementation
 - Cameras: snapshot subscriber implementation used by the event manager
+- Visitor Intelligence: homeowner-facing retention, event detail, timeline, and daily statistics
 
 ## Event Runtime
 - One event: `hip_doorbell_pressed`
@@ -29,6 +30,17 @@ binary_sensor.doorbell_ringing
 - One persistence model: helper-backed latest-event state in HIP Core
 - One artifact manager: `script.hip_artifact_manager`
 - Subscribers do not communicate directly
+
+## Device Registry
+- The Kernel is the only component allowed to resolve devices.
+- The Device Registry is private to the Kernel.
+- Packages consume logical devices only and must never treat entity IDs as public inputs.
+- The Event Contract exposes logical devices only.
+
+## Kernel Boundary
+- Packages communicate only through the Event Runtime.
+- Packages must never access entity IDs directly as part of their public behavior model.
+- Logical devices are the only supported package-facing abstraction.
 
 ## Change Guardrails
 - Prefer extending existing package behavior over replacing working flows.

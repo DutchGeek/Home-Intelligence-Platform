@@ -1,0 +1,85 @@
+automation:
+  - alias: HIP Test Validation Dispatch
+    id: hip_test_validation_dispatch
+    mode: queued
+    trigger:
+      - platform: event
+        event_type: hip_test_run
+    condition:
+      - condition: template
+        value_template: >-
+          {{ is_state(states('input_text.hip_registry_test_enabled_entity'), 'on') }}
+    action:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.event.data.scenario == 'doorbell_pressed' }}"
+            sequence:
+              - action: script.hip_event_manager
+                data:
+                  contract_version: hip.test.v1
+                  event_type: doorbell_pressed
+                  source: "{{ trigger.event.data.source }}"
+                  message: "{{ trigger.event.data.message }}"
+                  event_id: "{{ trigger.event.data.event_id }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.event.data.scenario == 'motion_detected' }}"
+            sequence:
+              - action: script.hip_event_manager
+                data:
+                  contract_version: hip.test.v1
+                  event_type: motion_detected
+                  source: "{{ trigger.event.data.source }}"
+                  message: "{{ trigger.event.data.message }}"
+                  event_id: "{{ trigger.event.data.event_id }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.event.data.scenario == 'camera_unavailable' }}"
+            sequence:
+              - action: input_text.set_value
+                target:
+                  entity_id: "{{ states('input_text.hip_registry_test_last_result_entity') }}"
+                data:
+                  value: camera unavailable simulated
+              - action: camera.snapshot
+                data:
+                  entity_id: "{{ states('input_text.hip_registry_test_missing_camera_entity') }}"
+                  filename: /config/www/snapshots/hip_test_camera_unavailable.jpg
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.event.data.scenario == 'piper_unavailable' }}"
+            sequence:
+              - action: input_text.set_value
+                target:
+                  entity_id: "{{ states('input_text.hip_registry_test_last_result_entity') }}"
+                data:
+                  value: piper unavailable simulated
+              - action: tts.speak
+                target:
+                  entity_id: "{{ states('input_text.hip_registry_test_missing_piper_entity') }}"
+                data:
+                  media_player_entity_id: "{{ states('input_text.hip_registry_homepod_player_entity') }}"
+                  message: "{{ trigger.event.data.message }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.event.data.scenario == 'notification_unavailable' }}"
+            sequence:
+              - action: input_text.set_value
+                target:
+                  entity_id: "{{ states('input_text.hip_registry_test_last_result_entity') }}"
+                data:
+                  value: notification unavailable simulated
+              - action: "{{ states('input_text.hip_registry_test_missing_notification_service') }}"
+                data:
+                  title: HIP Test
+                  message: "{{ trigger.event.data.message }}"
+        default:
+          - action: script.hip_test_log
+            data:
+              scenario: "{{ trigger.event.data.scenario | default('unknown', true) }}"
+              event_id: "{{ trigger.event.data.event_id | default('', true) }}"
+              event_type: "{{ trigger.event.data.event_type | default('', true) }}"
+              source: "{{ trigger.event.data.source | default('test.harness', true) }}"
+              message: "{{ trigger.event.data.message | default('', true) }}"
+              result: unsupported scenario

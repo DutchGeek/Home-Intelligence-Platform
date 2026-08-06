@@ -22,7 +22,7 @@ script:
       artifact_public_path:
         required: false
     sequence:
-      - action: notify.mobile_app_robins_iphone
+      - action: "{{ states('input_text.hip_registry_mobile_notify_service') }}"
         data:
           title: Doorbell
           message: "{{ message | default('Someone is at the front door.', true) }}"

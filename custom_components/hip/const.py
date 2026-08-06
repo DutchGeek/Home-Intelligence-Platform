@@ -4,7 +4,7 @@ from datetime import timedelta
 from typing import Final
 
 DOMAIN: Final = "hip"
-INTEGRATION_VERSION: Final = "2.5.1"
+INTEGRATION_VERSION: Final = "2.5.3"
 DEFAULT_TITLE: Final = "HIP"
 COORDINATOR_NAME: Final = "HIP coordinator"
 SCAN_INTERVAL: Final = timedelta(minutes=1)
