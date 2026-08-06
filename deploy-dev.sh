@@ -1,5 +1,6 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "${SCRIPT_DIR}/tools/deploy-dev.sh" "$@"
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+bash "${SCRIPT_DIR}/tools/deploy-dev.sh" "$@"
+exit $?
