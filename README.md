@@ -1,6 +1,6 @@
 # Home Intelligence Platform (HIP)
 
-Version: 2.1.0
+Version: 2.5.2
 
 A modular, event-driven Home Assistant platform.
 
@@ -15,6 +15,8 @@ A modular, event-driven Home Assistant platform.
 - Package-first Home Assistant implementation
 - Event-driven pipeline centered on custom HIP events
 - Existing entity IDs preserved from prior releases
+- Device Registry is the canonical source of truth for entity and service identifiers
+- Operational packages resolve targets through registry values instead of hardcoded device IDs
 
 ## Production Principles
 - Reliability over feature growth
@@ -44,3 +46,45 @@ A modular, event-driven Home Assistant platform.
 - Added helper-backed event persistence and lifecycle state
 - Added artifact manager, snapshot manager flow, and retention policy ownership
 - Preserved the existing doorbell behavior without direct subscriber communication
+
+## v2.2.0 First Production Release
+- Added event history, HIP Inspector, snapshot viewer, runtime metrics, and an operational dashboard
+- Built on the existing event runtime and event contract
+- No AI features added
+- No breaking changes introduced
+
+## v2.3.0 Visitor Intelligence
+- Added a homeowner-facing visitor timeline and snapshot history
+- Added event detail answers for who, when, what, notified, announced, and snapshot captured
+- Added daily visitor, notification, announcement, and snapshot statistics
+- Built entirely on the existing Kernel and Event Runtime
+
+## v2.4.0 Installation & Home Assistant Integration
+- Added a native `custom_components/hip` management integration
+- Added installation, configuration, runtime health, and smoke-test validation services
+- Added diagnostics and support bundle export
+- Added integration UI surfaces for version, modules, runtime status, and management actions
+
+## v2.5.1 Deployment Simplification
+- HIP integration is deployment-dashboard only (no internal file installation or rollback)
+- Repository scripts manage deploy/rollback/validation from outside Home Assistant
+- Added script entrypoints under `tools/`:
+	- `deploy-dev.sh`
+	- `deploy-prod.sh`
+	- `rollback-dev.sh`
+	- `rollback-prod.sh`
+	- `validate.sh`
+
+## v2.5.2 Deployment Experience
+- Added deployment configuration files:
+	- `config/dev.env`
+	- `config/prod.env`
+- Deployment scripts now auto-load environment configuration by target
+- Added git safety checks and optional `git pull --ff-only` support
+- Added interactive deployment confirmation (configurable)
+- Added colored output, progress indicators, and duration reporting
+- Added validation and smoke-test summary output
+
+### One-command deployment
+- Development: `./deploy-dev.sh`
+- Production: `./deploy-prod.sh`

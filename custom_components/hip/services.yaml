@@ -1,0 +1,36 @@
+validate:
+  name: Validate Installation
+  description: Run installation, configuration, and runtime validation for HIP.
+reload:
+  name: Reload HIP
+  description: Reload Home Assistant core configuration and refresh HIP state.
+health_check:
+  name: Health Check
+  description: Run a HIP runtime health check.
+export_support_bundle:
+  name: Export Support Bundle
+  description: Export a HIP diagnostics support bundle to the Home Assistant config directory.
+run_smoke_tests:
+  name: Run Smoke Tests
+  description: Run HIP smoke tests and return the results.
+version:
+  name: Version
+  description: Return installed, repository, and kernel version information.
+kernel_status:
+  name: Kernel Status
+  description: Return Kernel installation and health information.
+module_status:
+  name: Module Status
+  description: Return installation and health status for all HIP modules.
+event_statistics:
+  name: Event Statistics
+  description: Return HIP event and runtime statistics.
+check_updates:
+  name: Check for Updates
+  description: Query GitHub Releases and refresh latest HIP version metadata.
+open_release_notes:
+  name: Open Release Notes
+  description: Show the latest release notes URL in a Home Assistant notification.
+deployment_status:
+  name: Deployment Status
+  description: Return deployment target, update status, and latest deployment metadata reported by external deployment scripts.
