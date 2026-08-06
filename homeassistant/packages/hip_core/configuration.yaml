@@ -1,2 +1,2 @@
-homeassistant:
-  packages: !include_dir_named ../packages
+# Package-level configuration for hip_core is defined in helpers.yaml and scripts.yaml.
+# Keep this file intentionally comment-only to avoid nested package include warnings.
