@@ -20,6 +20,15 @@ binary_sensor.doorbell_ringing
 - Media: Piper HomePod announcements
 - Cameras: snapshot capture
 
+## Change Guardrails
+- Prefer extending existing package behavior over replacing working flows.
+- Keep one primary responsibility per package.
+- Emit one normalized HIP event per trigger.
+- Avoid multiple automations that react to the same trigger unless each automation owns a distinct responsibility.
+- Preserve existing entity IDs to reduce operational migration risk.
+- Treat race-condition analysis as a release requirement for any fan-out event flow.
+
 ## Compatibility
 - Existing entity IDs are preserved where practical
 - Legacy script call path script.hip_log_event remains available
+

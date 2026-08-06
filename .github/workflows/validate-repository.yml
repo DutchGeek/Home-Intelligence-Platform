@@ -1,0 +1,105 @@
+name: Validate Repository
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install validation dependencies
+        run: python -m pip install --disable-pip-version-check pyyaml
+
+      - name: Validate YAML, Markdown links, and repository structure
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+          import urllib.parse
+          import yaml
+
+          root = Path('.').resolve()
+          errors = []
+
+          def rel(path: Path) -> str:
+              return path.relative_to(root).as_posix()
+
+          def add_error(message: str) -> None:
+              errors.append(message)
+
+          required_paths = [
+              '.github',
+              '.github/ISSUE_TEMPLATE',
+              '.github/PULL_REQUEST_TEMPLATE.md',
+              '.github/CODEOWNERS',
+              '.github/workflows',
+              'docs/adr',
+              'docs/development',
+              'docs/releases',
+              'CONTRIBUTING.md',
+              'SECURITY.md',
+              'SUPPORT.md',
+              'CODE_OF_CONDUCT.md',
+          ]
+
+          for expected in required_paths:
+              path = root / expected
+              if not path.exists():
+                  add_error(f'Missing required path: {expected}')
+
+          yaml_files = [
+              path for path in root.rglob('*')
+              if path.is_file() and path.suffix.lower() in {'.yml', '.yaml'}
+          ]
+
+          for path in yaml_files:
+              try:
+                  yaml.safe_load(path.read_text(encoding='utf-8'))
+              except Exception as exc:
+                  add_error(f'YAML parse failed: {rel(path)}: {exc}')
+
+          md_files = [
+              path for path in root.rglob('*.md')
+              if '.git/' not in path.as_posix()
+          ]
+          link_pattern = re.compile(r'!?\[[^\]]*\]\(([^)]+)\)')
+
+          for path in md_files:
+              text = path.read_text(encoding='utf-8')
+              for raw_target in link_pattern.findall(text):
+                  target = raw_target.strip()
+                  if not target or target.startswith('#'):
+                      continue
+                  if re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
+                      continue
+                  target = target.split('#', 1)[0].strip()
+                  if not target:
+                      continue
+                  decoded = urllib.parse.unquote(target)
+                  candidate = (path.parent / decoded).resolve()
+                  if not candidate.exists():
+                      add_error(
+                          f'Markdown link target missing: {rel(path)} -> {raw_target}'
+                      )
+
+          if errors:
+              print('Validation failed:')
+              for item in errors:
+                  print(f'- {item}')
+              sys.exit(1)
+
+          print('Repository validation passed.')
+          PY

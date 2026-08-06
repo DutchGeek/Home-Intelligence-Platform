@@ -1,0 +1,43 @@
+name: Engineering Change Request
+description: Propose an engineering, documentation, or non-user-facing improvement.
+title: "engineering: "
+labels:
+  - engineering
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What engineering problem is being solved?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Keep scope narrow and production-safe.
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: No working code should be rewritten without strong justification
+        - label: Reliability is more important than feature growth
+        - label: Migration path will be documented
+        - label: Rollback instructions will be documented
+        - label: Race conditions will be reviewed
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation approach
+      description: How will this be validated before merge?
+    validations:
+      required: true

@@ -1,0 +1,67 @@
+name: Bug Report
+description: Report a production defect, regression, or reliability issue.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for defects in production behavior, configuration, documentation, or engineering workflows.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: Short description of the defect.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - homeassistant/packages/hip_core
+        - homeassistant/packages/security
+        - homeassistant/packages/notifications
+        - homeassistant/packages/media
+        - homeassistant/packages/cameras
+        - docs
+        - github-actions
+        - repository-structure
+    validations:
+      required: true
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current behavior
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include trigger, entities, and validation path.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Production impact
+      description: Describe operational or user impact.
+    validations:
+      required: true
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Known rollback path
+      description: If known, describe how to return service safely.
+    validations:
+      required: false
