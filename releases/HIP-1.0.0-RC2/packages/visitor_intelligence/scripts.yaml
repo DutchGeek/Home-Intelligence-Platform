@@ -1,0 +1,178 @@
+script:
+  hip_record_visitor_event:
+    alias: HIP Record Visitor Event
+    mode: queued
+    fields:
+      event_id:
+        required: true
+      contract_version:
+        required: true
+      event_type:
+        required: true
+      source:
+        required: true
+      message:
+        required: true
+      occurred_at:
+        required: true
+      lifecycle:
+        required: true
+      artifact_path:
+        required: false
+      artifact_public_path:
+        required: false
+    sequence:
+      - variables:
+          resolved_today: "{{ now().strftime('%Y-%m-%d') }}"
+          resolved_previous_day: "{{ states('input_text.hip_visitor_stats_day') }}"
+          resolved_who: >-
+            {% if source == 'security.front_door' %}
+              Front door visitor
+            {% else %}
+              Visitor event
+            {% endif %}
+          resolved_timeline_entry: >-
+            {{ occurred_at }} | {{ resolved_who }} | {{ message }}
+          resolved_snapshot_history_entry: >-
+            {{ artifact_public_path | default('/local/snapshots/front_door_latest.jpg', true) }}
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ resolved_previous_day != resolved_today }}"
+            sequence:
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.hip_visitor_stats_day
+                data:
+                  value: "{{ resolved_today }}"
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.hip_daily_visitor_count
+                data:
+                  value: 0
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.hip_daily_notification_count
+                data:
+                  value: 0
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.hip_daily_homepod_count
+                data:
+                  value: 0
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.hip_daily_snapshot_count
+                data:
+                  value: 0
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_visitor_timeline_5
+        data:
+          value: "{{ states('input_text.hip_visitor_timeline_4') }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_visitor_timeline_4
+        data:
+          value: "{{ states('input_text.hip_visitor_timeline_3') }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_visitor_timeline_3
+        data:
+          value: "{{ states('input_text.hip_visitor_timeline_2') }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_visitor_timeline_2
+        data:
+          value: "{{ states('input_text.hip_visitor_timeline_1') }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_visitor_timeline_1
+        data:
+          value: "{{ resolved_timeline_entry }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_snapshot_history_5
+        data:
+          value: "{{ states('input_text.hip_snapshot_history_4') }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_snapshot_history_4
+        data:
+          value: "{{ states('input_text.hip_snapshot_history_3') }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_snapshot_history_3
+        data:
+          value: "{{ states('input_text.hip_snapshot_history_2') }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_snapshot_history_2
+        data:
+          value: "{{ states('input_text.hip_snapshot_history_1') }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_snapshot_history_1
+        data:
+          value: "{{ resolved_snapshot_history_entry }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_event_detail_when
+        data:
+          value: "{{ occurred_at }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_event_detail_what
+        data:
+          value: "{{ message }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_event_detail_who
+        data:
+          value: "{{ resolved_who }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_event_detail_notified
+        data:
+          value: yes
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_event_detail_announced
+        data:
+          value: yes
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_event_detail_snapshot
+        data:
+          value: "{{ 'yes' if artifact_public_path | default('', true) != '' else 'no' }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hip_event_detail_snapshot_url
+        data:
+          value: "{{ artifact_public_path | default('/local/snapshots/front_door_latest.jpg', true) }}"
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hip_daily_visitor_count
+        data:
+          value: "{{ states('input_number.hip_daily_visitor_count') | float(0) + 1 }}"
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hip_daily_notification_count
+        data:
+          value: "{{ states('input_number.hip_daily_notification_count') | float(0) + 1 }}"
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hip_daily_homepod_count
+        data:
+          value: "{{ states('input_number.hip_daily_homepod_count') | float(0) + 1 }}"
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hip_daily_snapshot_count
+        data:
+          value: "{{ states('input_number.hip_daily_snapshot_count') | float(0) + 1 }}"
+      - action: logbook.log
+        data:
+          name: HIP Visitor Intelligence
+          message: >-
+            when={{ occurred_at }}, who={{ resolved_who }}, notified=yes, announced=yes,
+            snapshot={{ 'yes' if artifact_public_path | default('', true) != '' else 'no' }}

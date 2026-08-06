@@ -1,0 +1,23 @@
+script:
+  hip_rc2_deployment_check:
+    alias: HIP RC2 Deployment Check
+    mode: queued
+    sequence:
+      - action: hip.version
+        response_variable: hip_version
+      - action: hip.validate
+        response_variable: hip_validation
+      - action: hip.health_check
+        response_variable: hip_health
+      - action: hip.kernel_status
+        response_variable: hip_kernel
+      - action: hip.module_status
+        response_variable: hip_modules
+      - action: persistent_notification.create
+        data:
+          title: HIP RC2 Deployment Check
+          message: >-
+            integration={{ 'ok' if hip_version is mapping else 'missing' }},
+            validation={{ hip_validation.runtime_healthy if hip_validation is mapping and 'runtime_healthy' in hip_validation else 'unknown' }},
+            kernel={{ hip_kernel.healthy if hip_kernel is mapping and 'healthy' in hip_kernel else 'unknown' }},
+            modules={{ hip_modules | tojson if hip_modules is mapping else 'unknown' }}

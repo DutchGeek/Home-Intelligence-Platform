@@ -1,0 +1,72 @@
+input_boolean:
+  hip_enabled:
+    name: HIP Enabled
+    initial: true
+
+input_text:
+  hip_last_event:
+    name: HIP Last Event
+    max: 255
+
+  hip_event_history:
+    name: HIP Event History
+    max: 255
+
+  hip_last_event_id:
+    name: HIP Last Event ID
+    max: 64
+
+  hip_last_event_type:
+    name: HIP Last Event Type
+    max: 64
+
+  hip_last_event_source:
+    name: HIP Last Event Source
+    max: 128
+
+  hip_last_event_contract_version:
+    name: HIP Last Event Contract Version
+    max: 32
+    initial: hip.event.v1
+
+  hip_last_event_lifecycle:
+    name: HIP Last Event Lifecycle
+    max: 64
+
+  hip_last_event_artifact:
+    name: HIP Last Event Artifact
+    max: 255
+
+  hip_last_event_artifact_public:
+    name: HIP Last Event Public Artifact
+    max: 255
+
+  hip_snapshot_artifact_path:
+    name: HIP Snapshot Artifact Path
+    max: 255
+    initial: /config/www/snapshots/front_door_latest.jpg
+
+  hip_snapshot_public_path:
+    name: HIP Snapshot Public Path
+    max: 255
+    initial: /local/snapshots/front_door_latest.jpg
+
+  hip_artifact_retention_policy:
+    name: HIP Artifact Retention Policy
+    max: 64
+    initial: overwrite_latest
+
+input_datetime:
+  hip_last_event_at:
+    name: HIP Last Event At
+    has_date: true
+    has_time: true
+
+input_number:
+  hip_event_total:
+    name: HIP Event Total
+    min: 0
+    max: 99999
+    step: 1
+    mode: box
+    initial: 0

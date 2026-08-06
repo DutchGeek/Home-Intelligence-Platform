@@ -1,0 +1,31 @@
+script:
+  hip_homepod_announce:
+    alias: HIP HomePod Announcement
+    mode: queued
+    fields:
+      event_id:
+        required: false
+      contract_version:
+        required: false
+      event_type:
+        required: false
+      source:
+        required: false
+      message:
+        required: false
+      occurred_at:
+        required: false
+      lifecycle:
+        required: false
+      artifact_path:
+        required: false
+      artifact_public_path:
+        required: false
+    sequence:
+      - action: tts.speak
+        target:
+          entity_id: "{{ states('input_text.hip_registry_piper_tts_entity') }}"
+        data:
+          media_player_entity_id: "{{ states('input_text.hip_registry_homepod_player_entity') }}"
+          message: >-
+            {{ message | default('Attention. There is someone at the front door.', true) }}

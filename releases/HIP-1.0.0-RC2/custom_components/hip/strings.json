@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up HIP",
+        "description": "Add the Home Intelligence Platform management integration."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only a single HIP configuration is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HIP options",
+        "data": {
+          "documentation_url": "Documentation URL",
+          "packages_path": "Packages path",
+          "dashboard_path": "Dashboard path",
+          "release_notes_path": "Release notes path"
+        }
+      }
+    }
+  },
+  "issues": {
+    "runtime_health": {
+      "title": "HIP runtime health issue",
+      "description": "HIP runtime status is {runtime_status}. Review the HIP documentation and run validation from the integration."
+    }
+  }
+}

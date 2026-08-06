@@ -1,0 +1,90 @@
+title: HIP
+views:
+  - title: Overview
+    path: hip
+    icon: mdi:home-analytics
+    cards:
+      - type: markdown
+        content: |
+          # Home Intelligence Platform
+          First production release dashboard.
+
+          - Event contract: `hip.event.v1`
+          - Runtime: Event Runtime
+          - No AI features
+
+      - type: entities
+        title: HIP Inspector
+        entities:
+          - input_text.hip_last_event
+          - input_text.hip_last_event_id
+          - input_text.hip_last_event_type
+          - input_text.hip_last_event_source
+          - input_text.hip_last_event_contract_version
+          - input_text.hip_last_event_lifecycle
+          - input_text.hip_last_event_artifact
+          - input_text.hip_last_event_artifact_public
+
+      - type: entities
+        title: Event History
+        entities:
+          - input_text.hip_event_history
+
+      - type: entities
+        title: Visitor Timeline
+        entities:
+          - input_text.hip_visitor_timeline_1
+          - input_text.hip_visitor_timeline_2
+          - input_text.hip_visitor_timeline_3
+          - input_text.hip_visitor_timeline_4
+          - input_text.hip_visitor_timeline_5
+
+      - type: entities
+        title: Event Detail / Inspector
+        entities:
+          - input_text.hip_event_detail_who
+          - input_text.hip_event_detail_when
+          - input_text.hip_event_detail_what
+          - input_text.hip_event_detail_notified
+          - input_text.hip_event_detail_announced
+          - input_text.hip_event_detail_snapshot
+          - input_text.hip_event_detail_snapshot_url
+
+      - type: picture-entity
+        title: Snapshot Viewer
+        entity: camera.front_door
+        camera_view: auto
+        image: /local/snapshots/front_door_latest.jpg
+
+      - type: entities
+        title: Snapshot History
+        entities:
+          - input_text.hip_snapshot_history_1
+          - input_text.hip_snapshot_history_2
+          - input_text.hip_snapshot_history_3
+          - input_text.hip_snapshot_history_4
+          - input_text.hip_snapshot_history_5
+
+      - type: entities
+        title: Runtime Metrics
+        entities:
+          - input_number.hip_event_total
+          - input_datetime.hip_last_event_at
+          - input_boolean.hip_enabled
+
+      - type: entities
+        title: Daily Statistics
+        entities:
+          - input_text.hip_visitor_stats_day
+          - input_number.hip_daily_visitor_count
+          - input_number.hip_daily_notification_count
+          - input_number.hip_daily_homepod_count
+          - input_number.hip_daily_snapshot_count
+
+      - type: glance
+        title: Operational Dashboard
+        entities:
+          - input_boolean.hip_enabled
+          - input_number.hip_event_total
+          - input_text.hip_last_event_lifecycle
+          - input_text.hip_last_event_contract_version

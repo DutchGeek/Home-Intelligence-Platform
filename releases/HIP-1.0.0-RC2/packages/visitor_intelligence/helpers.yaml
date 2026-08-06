@@ -1,0 +1,87 @@
+input_text:
+  hip_visitor_timeline_1:
+    name: HIP Visitor Timeline 1
+    max: 255
+  hip_visitor_timeline_2:
+    name: HIP Visitor Timeline 2
+    max: 255
+  hip_visitor_timeline_3:
+    name: HIP Visitor Timeline 3
+    max: 255
+  hip_visitor_timeline_4:
+    name: HIP Visitor Timeline 4
+    max: 255
+  hip_visitor_timeline_5:
+    name: HIP Visitor Timeline 5
+    max: 255
+
+  hip_snapshot_history_1:
+    name: HIP Snapshot History 1
+    max: 255
+  hip_snapshot_history_2:
+    name: HIP Snapshot History 2
+    max: 255
+  hip_snapshot_history_3:
+    name: HIP Snapshot History 3
+    max: 255
+  hip_snapshot_history_4:
+    name: HIP Snapshot History 4
+    max: 255
+  hip_snapshot_history_5:
+    name: HIP Snapshot History 5
+    max: 255
+
+  hip_event_detail_when:
+    name: HIP Event Detail When
+    max: 255
+  hip_event_detail_what:
+    name: HIP Event Detail What
+    max: 255
+  hip_event_detail_who:
+    name: HIP Event Detail Who
+    max: 255
+  hip_event_detail_notified:
+    name: HIP Event Detail Notified
+    max: 64
+  hip_event_detail_announced:
+    name: HIP Event Detail Announced
+    max: 64
+  hip_event_detail_snapshot:
+    name: HIP Event Detail Snapshot
+    max: 64
+  hip_event_detail_snapshot_url:
+    name: HIP Event Detail Snapshot URL
+    max: 255
+  hip_visitor_stats_day:
+    name: HIP Visitor Stats Day
+    max: 32
+
+input_number:
+  hip_daily_visitor_count:
+    name: HIP Daily Visitor Count
+    min: 0
+    max: 9999
+    step: 1
+    mode: box
+    initial: 0
+  hip_daily_notification_count:
+    name: HIP Daily Notification Count
+    min: 0
+    max: 9999
+    step: 1
+    mode: box
+    initial: 0
+  hip_daily_homepod_count:
+    name: HIP Daily HomePod Count
+    min: 0
+    max: 9999
+    step: 1
+    mode: box
+    initial: 0
+  hip_daily_snapshot_count:
+    name: HIP Daily Snapshot Count
+    min: 0
+    max: 9999
+    step: 1
+    mode: box
+    initial: 0

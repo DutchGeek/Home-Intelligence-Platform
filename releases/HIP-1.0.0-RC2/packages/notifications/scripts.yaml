@@ -1,0 +1,33 @@
+script:
+  hip_notify_doorbell:
+    alias: HIP Doorbell Notification
+    mode: queued
+    fields:
+      event_id:
+        required: false
+      contract_version:
+        required: false
+      event_type:
+        required: false
+      source:
+        required: false
+      message:
+        required: false
+      occurred_at:
+        required: false
+      lifecycle:
+        required: false
+      artifact_path:
+        required: false
+      artifact_public_path:
+        required: false
+    sequence:
+      - action: "{{ states('input_text.hip_registry_mobile_notify_service') }}"
+        data:
+          title: Doorbell
+          message: "{{ message | default('Someone is at the front door.', true) }}"
+          data:
+            push:
+              sound: default
+            image: >-
+              {{ artifact_public_path | default('/local/snapshots/front_door_latest.jpg', true) }}

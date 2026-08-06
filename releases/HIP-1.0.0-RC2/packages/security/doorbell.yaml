@@ -1,0 +1,19 @@
+automation:
+  - alias: HIP Front Door Event
+    id: hip_front_door_event
+    mode: single
+    trigger:
+      - platform: template
+        value_template: >-
+          {{ is_state(states('input_text.hip_registry_doorbell_sensor_entity'), 'on') }}
+    condition:
+      - condition: state
+        entity_id: "{{ states('input_text.hip_registry_hip_enabled_entity') }}"
+        state: "on"
+    action:
+      - action: script.hip_event_manager
+        data:
+          contract_version: hip.event.v1
+          event_type: doorbell_pressed
+          source: security.front_door
+          message: "Front door doorbell pressed"
