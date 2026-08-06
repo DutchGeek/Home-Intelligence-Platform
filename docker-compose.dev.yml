@@ -15,16 +15,16 @@ services:
       - -c
     command: |
       set -eu
-      mkdir -p /config/homeassistant/packages
+      mkdir -p /config/packages
       mkdir -p /config/www/snapshots
       if [ ! -f /config/configuration.yaml ]; then
         printf '%s\n' \
           'default_config:' \
           'homeassistant:' \
-          '  packages: !include_dir_named homeassistant/packages' \
+          '  packages: !include_dir_named packages' \
           > /config/configuration.yaml
       fi
-      cp -R /workspace/homeassistant/packages/. /config/homeassistant/packages/
+      cp -R /workspace/homeassistant/packages/. /config/packages/
       exec /init
 
 volumes:

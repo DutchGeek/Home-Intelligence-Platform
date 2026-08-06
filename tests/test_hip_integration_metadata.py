@@ -112,3 +112,10 @@ def test_root_deploy_wrappers_exist() -> None:
         assert script_path.exists()
         content = script_path.read_text(encoding="utf-8")
         assert "tools/" in content
+
+
+def test_dev_compose_uses_canonical_packages_runtime_path() -> None:
+    content = (ROOT / "docker-compose.dev.yml").read_text(encoding="utf-8")
+    assert "/config/packages" in content
+    assert "packages: !include_dir_named packages" in content
+    assert "/config/homeassistant/packages" not in content
