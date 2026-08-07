@@ -20,12 +20,63 @@ Repository source paths:
 2. `homeassistant/packages`
 3. `homeassistant/dashboards/HIP-Dashboard.yaml`
 
+Build artifact paths:
+1. `build/packages/*.yaml`
+2. `build/package-report.json`
+
 Home Assistant runtime paths:
 1. `/config/custom_components/hip`
 2. `/config/packages`
 3. `/config/homeassistant/dashboards/HIP-Dashboard.yaml`
 
 HIP uses `/config/packages` as the canonical package load target.
+
+## HIP package compilation
+Deployment compiles package fragments before copying files to Home Assistant runtime.
+
+Compiler input:
+1. `homeassistant/packages/<package_name>/*.yaml`
+
+Compiler output:
+1. `build/packages/<package_name>.yaml`
+2. `build/package-report.json`
+
+Compilation rules:
+1. All `.yaml` fragments inside each package directory are merged into one YAML document.
+2. Duplicate top-level domains inside a package fail compilation.
+3. Duplicate entity IDs in list-based domains that use `id` fail compilation.
+4. Malformed YAML fails compilation.
+5. Empty package directories are skipped with warning.
+6. Output file generation is deterministic.
+
+Empty package policy:
+1. If a package directory has one or more `.yaml` files, it is compiled.
+2. If a package directory has no `.yaml` files, compiler emits warning: `Skipping empty package '<package>'`.
+3. Empty package warnings do not fail deployment.
+4. Malformed YAML and duplicate validation failures stop deployment.
+
+Compiler runtime requirement:
+1. `python3` or `python`
+2. `PyYAML` available in that interpreter
+
+Deployment copies only compiled package artifacts (`build/packages/*.yaml`) to `/config/packages`.
+Deployment also copies `build/package-report.json` to `/config/hip/package-report.json` for diagnostics.
+
+## Compiler report
+The compiler report is a deployment build artifact located at:
+1. `build/package-report.json`
+
+Report includes:
+1. package name
+2. source directory
+3. generated file path (or null when skipped)
+4. Home Assistant domains included
+5. entity counts per domain
+6. compilation warnings
+7. per-package compile duration
+8. aggregate compile duration and counts
+
+`export_support_bundle` includes the package compiler report payload when `/config/hip/package-report.json` exists.
 
 ## Configuration source resolution
 Deployment scripts resolve configuration in this order:
@@ -126,7 +177,7 @@ Final status:
 Dry run:
 1. Loads configuration.
 2. Runs preflight validation.
-3. Prints planned actions.
+3. Prints planned actions including package compilation.
 4. Exits successfully.
 
 Dry run does not:
@@ -135,6 +186,25 @@ Dry run does not:
 3. Copy files.
 4. Restart containers.
 5. Call Home Assistant services.
+
+## Validation failures
+Compilation fails deployment when:
+1. Any package fragment contains malformed YAML.
+2. A package declares duplicate top-level domains across fragments.
+3. A list-based domain declares duplicate `id` values in one fragment.
+4. Zero compiled package artifacts are produced.
+
+Compilation warnings:
+1. Empty packages are reported as warnings and skipped.
+2. Warning counts and report location are included in deployment report output.
+
+## Troubleshooting package compilation
+1. Verify `python3` or `python` is available.
+2. Verify `PyYAML` is installed for that interpreter.
+3. Run compiler manually:
+   - `python tools/hip_package_compiler.py --source homeassistant/packages --output build/packages --report build/package-report.json`
+4. Open `build/package-report.json` and review `warnings` and package records.
+5. Resolve malformed YAML, duplicate domains, or duplicate `id` entries before re-running deploy.
 
 ## Rollback and validation commands
 1. `tools/rollback-dev.sh`

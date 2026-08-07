@@ -22,6 +22,14 @@ HIP_CONFIGURATION_FILE=""
 HIP_RUNTIME_CUSTOM_COMPONENTS_DIR="/config/custom_components"
 HIP_RUNTIME_PACKAGES_DIR="/config/packages"
 HIP_RUNTIME_DASHBOARDS_DIR="/config/homeassistant/dashboards"
+HIP_BUILD_ROOT_DIR="${HIP_BUILD_ROOT_DIR:-${HIP_REPO_ROOT}/build}"
+HIP_COMPILED_PACKAGES_DIR="${HIP_COMPILED_PACKAGES_DIR:-${HIP_BUILD_ROOT_DIR}/packages}"
+HIP_PYTHON_BIN="${HIP_PYTHON_BIN:-}"
+HIP_COMPILE_REPORT_PATH=""
+HIP_COMPILE_WARNING_COUNT="0"
+HIP_COMPILED_PACKAGE_COUNT="0"
+HIP_SKIPPED_PACKAGE_COUNT="0"
+HIP_COMPILE_WARNINGS_TEXT=""
 
 HIP_VALIDATE_RESULT=""
 HIP_SMOKE_RESULT=""
@@ -86,10 +94,103 @@ hip_require_base_dependencies() {
   hip_require_command docker
   hip_require_command curl
   hip_require_command git
+  hip_resolve_python_bin
 }
 
 hip_has_command() {
   command -v "$1" >/dev/null 2>&1
+}
+
+hip_resolve_python_bin() {
+  if [ -n "${HIP_PYTHON_BIN}" ]; then
+    return
+  fi
+
+  if hip_has_command python3; then
+    HIP_PYTHON_BIN="python3"
+    return
+  fi
+
+  if hip_has_command python; then
+    HIP_PYTHON_BIN="python"
+    return
+  fi
+
+  hip_log_error "python interpreter not found (tried python3 and python)"
+  exit 1
+}
+
+hip_compile_package_artifacts() {
+  local repo_root="$1"
+  local compiler_script="${repo_root}/tools/hip_package_compiler.py"
+  local source_root="${repo_root}/homeassistant/packages"
+  local output_root="${repo_root}/build/packages"
+  local report_path="${repo_root}/build/package-report.json"
+
+  if [ ! -f "${compiler_script}" ]; then
+    hip_log_error "compiler script not found: ${compiler_script}"
+    exit 1
+  fi
+
+  if [ ! -d "${source_root}" ]; then
+    hip_log_error "package source directory not found: ${source_root}"
+    exit 1
+  fi
+
+  hip_resolve_python_bin
+  if ! "${HIP_PYTHON_BIN}" -c "import yaml" >/dev/null 2>&1; then
+    hip_log_error "PyYAML is required for package compilation and is not available for ${HIP_PYTHON_BIN}"
+    exit 1
+  fi
+  "${HIP_PYTHON_BIN}" "${compiler_script}" --source "${source_root}" --output "${output_root}" --report "${report_path}"
+
+  if ! compgen -G "${output_root}/*.yaml" >/dev/null; then
+    hip_log_error "no compiled package artifacts were generated in ${output_root}"
+    exit 1
+  fi
+
+  if [ ! -f "${report_path}" ]; then
+    hip_log_error "package compilation report not found: ${report_path}"
+    exit 1
+  fi
+
+  local summary
+  if ! summary="$("${HIP_PYTHON_BIN}" - "${report_path}" <<'PY'
+import json
+import sys
+
+report_path = sys.argv[1]
+with open(report_path, encoding="utf-8") as handle:
+    report = json.load(handle)
+
+compiled = int(report.get("compiled_package_count", 0))
+skipped = int(report.get("skipped_package_count", 0))
+warnings = report.get("warnings", [])
+
+print(compiled)
+print(skipped)
+print(len(warnings))
+for warning in warnings:
+    print(str(warning))
+PY
+)"; then
+    hip_log_error "failed to parse package compilation report: ${report_path}"
+    exit 1
+  fi
+
+  HIP_COMPILE_REPORT_PATH="${report_path}"
+  HIP_COMPILED_PACKAGE_COUNT="$(printf '%s\n' "${summary}" | sed -n '1p')"
+  HIP_SKIPPED_PACKAGE_COUNT="$(printf '%s\n' "${summary}" | sed -n '2p')"
+  HIP_COMPILE_WARNING_COUNT="$(printf '%s\n' "${summary}" | sed -n '3p')"
+  HIP_COMPILE_WARNINGS_TEXT="$(printf '%s\n' "${summary}" | sed -n '4,$p')"
+
+  hip_log_info "package compiler output: compiled=${HIP_COMPILED_PACKAGE_COUNT}, skipped=${HIP_SKIPPED_PACKAGE_COUNT}, warnings=${HIP_COMPILE_WARNING_COUNT}"
+  if [ "${HIP_COMPILE_WARNING_COUNT}" -gt 0 ] && [ -n "${HIP_COMPILE_WARNINGS_TEXT}" ]; then
+    while IFS= read -r warning; do
+      [ -z "${warning}" ] && continue
+      hip_log_warn "${warning}"
+    done <<< "${HIP_COMPILE_WARNINGS_TEXT}"
+  fi
 }
 
 hip_require_token() {
@@ -525,10 +626,7 @@ hip_backup_current() {
 
   docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip ]; then cp -a ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip '${backup_path}/custom_components/hip'; fi"
 
-  local pkg
-  for pkg in hip_core security notifications media cameras device_registry visitor_intelligence test ai; do
-    docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d ${HIP_RUNTIME_PACKAGES_DIR}/${pkg} ]; then cp -a ${HIP_RUNTIME_PACKAGES_DIR}/${pkg} '${backup_path}/homeassistant/packages/${pkg}'; fi"
-  done
+  docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d ${HIP_RUNTIME_PACKAGES_DIR} ]; then cp -a ${HIP_RUNTIME_PACKAGES_DIR}/. '${backup_path}/homeassistant/packages/'; fi"
 
   docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -f ${HIP_RUNTIME_DASHBOARDS_DIR}/HIP-Dashboard.yaml ]; then cp -a ${HIP_RUNTIME_DASHBOARDS_DIR}/HIP-Dashboard.yaml '${backup_path}/homeassistant/dashboards/HIP-Dashboard.yaml'; fi"
   docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d /config/hip ]; then cp -a /config/hip/. '${backup_path}/hip/'; fi"
@@ -550,19 +648,40 @@ EOF
 
 hip_copy_runtime_files() {
   local repo_root="$1"
+  local compiled_packages_dir="${repo_root}/build/packages"
+  local copied_any="false"
 
   docker exec "${HIP_CONTAINER_NAME}" sh -c "mkdir -p ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR} ${HIP_RUNTIME_PACKAGES_DIR} ${HIP_RUNTIME_DASHBOARDS_DIR}"
 
   docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip"
   docker cp "${repo_root}/custom_components/hip" "${HIP_CONTAINER_NAME}:${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip"
 
-  local pkg
-  for pkg in hip_core security notifications media cameras device_registry visitor_intelligence test ai; do
-    if [ -d "${repo_root}/homeassistant/packages/${pkg}" ]; then
-      docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf ${HIP_RUNTIME_PACKAGES_DIR}/${pkg}"
-      docker cp "${repo_root}/homeassistant/packages/${pkg}" "${HIP_CONTAINER_NAME}:${HIP_RUNTIME_PACKAGES_DIR}/${pkg}"
+  if [ ! -d "${compiled_packages_dir}" ]; then
+    hip_log_error "compiled package directory not found: ${compiled_packages_dir}"
+    exit 1
+  fi
+
+  local pkg_dir
+  for pkg_dir in "${repo_root}/homeassistant/packages"/*; do
+    if [ -d "${pkg_dir}" ]; then
+      local pkg
+      pkg="$(basename "${pkg_dir}")"
+      docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf ${HIP_RUNTIME_PACKAGES_DIR}/${pkg} ${HIP_RUNTIME_PACKAGES_DIR}/${pkg}.yaml"
     fi
   done
+
+  local pkg_file
+  for pkg_file in "${compiled_packages_dir}"/*.yaml; do
+    if [ -f "${pkg_file}" ]; then
+      copied_any="true"
+      docker cp "${pkg_file}" "${HIP_CONTAINER_NAME}:${HIP_RUNTIME_PACKAGES_DIR}/$(basename "${pkg_file}")"
+    fi
+  done
+
+  if [ "${copied_any}" != "true" ]; then
+    hip_log_error "no compiled package files found in ${compiled_packages_dir}"
+    exit 1
+  fi
 
   if [ -f "${repo_root}/homeassistant/dashboards/HIP-Dashboard.yaml" ]; then
     docker cp "${repo_root}/homeassistant/dashboards/HIP-Dashboard.yaml" "${HIP_CONTAINER_NAME}:${HIP_RUNTIME_DASHBOARDS_DIR}/HIP-Dashboard.yaml"
@@ -571,6 +690,11 @@ hip_copy_runtime_files() {
   if [ -d "${repo_root}/hip" ]; then
     docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf /config/hip && mkdir -p /config/hip"
     docker cp "${repo_root}/hip/." "${HIP_CONTAINER_NAME}:/config/hip"
+  fi
+
+  if [ -n "${HIP_COMPILE_REPORT_PATH}" ] && [ -f "${HIP_COMPILE_REPORT_PATH}" ]; then
+    docker exec "${HIP_CONTAINER_NAME}" sh -c "mkdir -p /config/hip"
+    docker cp "${HIP_COMPILE_REPORT_PATH}" "${HIP_CONTAINER_NAME}:/config/hip/package-report.json"
   fi
 }
 
@@ -582,11 +706,8 @@ hip_restore_backup() {
   docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip"
   docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d '${backup_path}/custom_components/hip' ]; then cp -a '${backup_path}/custom_components/hip' ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}/hip; fi"
 
-  local pkg
-  for pkg in hip_core security notifications media cameras device_registry visitor_intelligence test ai; do
-    docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf ${HIP_RUNTIME_PACKAGES_DIR}/${pkg}"
-    docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d '${backup_path}/homeassistant/packages/${pkg}' ]; then cp -a '${backup_path}/homeassistant/packages/${pkg}' ${HIP_RUNTIME_PACKAGES_DIR}/${pkg}; fi"
-  done
+  docker exec "${HIP_CONTAINER_NAME}" sh -c "rm -rf ${HIP_RUNTIME_PACKAGES_DIR} && mkdir -p ${HIP_RUNTIME_PACKAGES_DIR}"
+  docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d '${backup_path}/homeassistant/packages' ]; then cp -a '${backup_path}/homeassistant/packages/.' ${HIP_RUNTIME_PACKAGES_DIR}/; fi"
 
   docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -f '${backup_path}/homeassistant/dashboards/HIP-Dashboard.yaml' ]; then cp -a '${backup_path}/homeassistant/dashboards/HIP-Dashboard.yaml' ${HIP_RUNTIME_DASHBOARDS_DIR}/HIP-Dashboard.yaml; fi"
   docker exec "${HIP_CONTAINER_NAME}" sh -c "if [ -d '${backup_path}/hip' ]; then rm -rf /config/hip && mkdir -p /config/hip && cp -a '${backup_path}/hip/.' /config/hip/; fi"
@@ -687,9 +808,10 @@ hip_print_dry_run_plan() {
   printf '%s\n' "- Validate prerequisites and configuration"
   printf '%s\n' "- Apply git target policy and optional pull"
   printf '%s\n' "- Create HIP backup in container /config/.storage/hip/backups"
+  printf '%s\n' "- Compile package fragments into build/packages/*.yaml"
   printf '%s\n' "- Copy runtime files from repository to container"
   printf '%s\n' "  - custom_components -> ${HIP_RUNTIME_CUSTOM_COMPONENTS_DIR}"
-  printf '%s\n' "  - packages -> ${HIP_RUNTIME_PACKAGES_DIR}"
+  printf '%s\n' "  - compiled packages -> ${HIP_RUNTIME_PACKAGES_DIR}"
   printf '%s\n' "  - dashboards -> ${HIP_RUNTIME_DASHBOARDS_DIR}"
   printf '%s\n' "- Restart container and wait for Home Assistant startup"
   printf '%s\n' "- Run hip.validate and hip.run_smoke_tests when services are available"

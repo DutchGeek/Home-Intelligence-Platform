@@ -5,3 +5,4 @@ __pycache__/
 config/dev.env
 config/prod.env
 /mnt/apps/configs/hip/
+build/

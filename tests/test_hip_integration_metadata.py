@@ -94,6 +94,8 @@ def test_deployment_library_uses_external_configuration_directory() -> None:
     assert "HIP_DEFAULT_CONFIG_DIR=\"/mnt/apps/configs/hip\"" in content
     assert "HIP_CONFIG_DIR" in content
     assert "HIP_RUNTIME_PACKAGES_DIR=\"/config/packages\"" in content
+    assert "hip_compile_package_artifacts" in content
+    assert "package-report.json" in content
 
 
 def test_no_templated_entity_id_in_state_triggers_or_conditions() -> None:
@@ -119,3 +121,16 @@ def test_dev_compose_uses_canonical_packages_runtime_path() -> None:
     assert "/config/packages" in content
     assert "packages: !include_dir_named packages" in content
     assert "/config/homeassistant/packages" not in content
+
+
+def test_deploy_scripts_compile_packages_before_copying_runtime_files() -> None:
+    dev_content = (TOOLS / "deploy-dev.sh").read_text(encoding="utf-8")
+    prod_content = (TOOLS / "deploy-prod.sh").read_text(encoding="utf-8")
+
+    assert "hip_compile_package_artifacts" in dev_content
+    assert "hip_copy_runtime_files" in dev_content
+    assert dev_content.index("hip_compile_package_artifacts") < dev_content.index("hip_copy_runtime_files")
+
+    assert "hip_compile_package_artifacts" in prod_content
+    assert "hip_copy_runtime_files" in prod_content
+    assert prod_content.index("hip_compile_package_artifacts") < prod_content.index("hip_copy_runtime_files")

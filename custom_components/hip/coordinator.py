@@ -415,6 +415,14 @@ class HipDataUpdateCoordinator(DataUpdateCoordinator[HipStatus]):
         return self._support_bundle_payload()
 
     def _support_bundle_payload(self) -> dict[str, Any]:
+        compiler_report_path = self.base_path / self.hip_path / "package-report.json"
+        compiler_report: dict[str, Any] | None = None
+        if compiler_report_path.exists():
+            try:
+                compiler_report = json.loads(compiler_report_path.read_text(encoding="utf-8"))
+            except ValueError:
+                compiler_report = {"error": f"invalid JSON in {compiler_report_path}"}
+
         registry = {
             state.entity_id: state.state
             for state in self.hass.states.async_all("input_text")
@@ -440,7 +448,9 @@ class HipDataUpdateCoordinator(DataUpdateCoordinator[HipStatus]):
                 "dashboard_path": self.dashboard_path,
                 "documentation_url": self.documentation_url,
                 "release_notes_path": self.release_notes_root,
+                "compiler_report_path": str(compiler_report_path),
             },
+            "package_compiler": compiler_report,
             "device_registry": registry,
             "event_statistics": self.data.event_statistics if self.data else {},
             "recent_errors": recent_errors,

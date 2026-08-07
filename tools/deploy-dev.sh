@@ -46,7 +46,7 @@ hip_require_token
 
 START_EPOCH="$(hip_epoch_now)"
 
-hip_progress 1 10 "Validating configuration and environment"
+hip_progress 1 11 "Validating configuration and environment"
 hip_validate_paths_and_runtime
 
 if [ "${HIP_DRY_RUN}" = "true" ]; then
@@ -54,34 +54,37 @@ if [ "${HIP_DRY_RUN}" = "true" ]; then
 	exit 0
 fi
 
-hip_progress 2 10 "Checking git status policy"
+hip_progress 2 11 "Checking git status policy"
 hip_git_check_target_policy development
 
-hip_progress 3 10 "Pulling latest changes"
+hip_progress 3 11 "Pulling latest changes"
 hip_git_pull_if_enabled
 
-hip_progress 4 10 "Requesting deployment confirmation"
+hip_progress 4 11 "Requesting deployment confirmation"
 hip_confirm_or_abort "Deploy HIP to development container '${HIP_CONTAINER_NAME}' from '${HIP_REPO_ROOT}'?"
 
-hip_progress 5 10 "Preparing deployment state directories"
+hip_progress 5 11 "Preparing deployment state directories"
 hip_ensure_state_directories
 
 VERSION="$(tr -d '[:space:]' < "${HIP_REPO_ROOT}/VERSION")"
 TIMESTAMP="$(hip_timestamp_now)"
 
-hip_progress 6 10 "Creating backup"
+hip_progress 6 11 "Compiling HIP package artifacts"
+hip_compile_package_artifacts "${HIP_REPO_ROOT}"
+
+hip_progress 7 11 "Creating backup"
 BACKUP_PATH="$(hip_backup_current development "${VERSION}" "${TIMESTAMP}")"
 
-hip_progress 7 10 "Copying runtime files"
+hip_progress 8 11 "Copying runtime files"
 hip_copy_runtime_files "${HIP_REPO_ROOT}"
 
-hip_progress 8 10 "Restarting Home Assistant container"
+hip_progress 9 11 "Restarting Home Assistant container"
 hip_restart_container
 
-hip_progress 9 10 "Waiting for Home Assistant startup"
+hip_progress 10 11 "Waiting for Home Assistant startup"
 hip_wait_for_home_assistant "${HIP_WAIT_TIMEOUT}"
 
-hip_progress 10 10 "Running validation and smoke tests"
+hip_progress 11 11 "Running validation and smoke tests"
 VALIDATION_OK="true"
 if ! hip_run_validation_pipeline; then
 	VALIDATION_OK="false"
@@ -96,6 +99,12 @@ Version: ${VERSION}
 Container: ${HIP_CONTAINER_NAME}
 Backup: ${BACKUP_PATH}
 Action: deploy
+
+Package Compilation:
+Compiled Packages: ${HIP_COMPILED_PACKAGE_COUNT}
+Skipped Packages: ${HIP_SKIPPED_PACKAGE_COUNT}
+Warnings: ${HIP_COMPILE_WARNING_COUNT}
+Report: ${HIP_COMPILE_REPORT_PATH}
 
 Validation Result:
 ${HIP_VALIDATE_RESULT:-Skipped}
