@@ -67,6 +67,11 @@ def validate_runtime_health(
         "hip.deployment_status",
         "hip.run_smoke_tests",
         "hip.export_support_bundle",
+        "hip.visitor_create",
+        "hip.visitor_update",
+        "hip.visitor_delete",
+        "hip.visitor_get",
+        "hip.visitor_list",
     }
     if registered_services:
         missing_services = sorted(required_services - registered_services)

@@ -34,3 +34,89 @@ open_release_notes:
 deployment_status:
   name: Deployment Status
   description: Return deployment target, update status, and latest deployment metadata reported by external deployment scripts.
+visitor_create:
+  name: Visitor Create
+  description: Create a persistent Visitor Intelligence event.
+  fields:
+    event_id:
+      description: Optional stable event ID. Generated automatically when omitted.
+      example: visitor-20260808102435987123
+    camera:
+      description: Camera display name.
+      example: Front Door
+    timestamp:
+      description: ISO timestamp for the visitor event.
+      example: 2026-08-08T10:24:35+00:00
+    person:
+      description: Recognized person label. Use null for unknown.
+      example: null
+    snapshot:
+      description: Public snapshot path.
+      example: /local/snapshots/history/visitor-20260808102435987123.jpg
+    confidence:
+      description: Optional recognition confidence.
+      example: null
+    status:
+      description: Event status.
+      example: new
+    timeline_append:
+      description: Optional timeline entry to append when creating the event.
+      example: 10:24 Doorbell pressed
+visitor_update:
+  name: Visitor Update
+  description: Update an existing Visitor Intelligence event.
+  fields:
+    event_id:
+      required: true
+      description: Visitor event identifier.
+      example: visitor-20260808102435987123
+    status:
+      description: Updated status.
+      example: notified
+    person:
+      description: Person label or null.
+      example: Unknown
+    snapshot:
+      description: Public snapshot path.
+      example: /local/snapshots/history/visitor-20260808102435987123.jpg
+    confidence:
+      description: Recognition confidence.
+      example: null
+    notification_sent:
+      description: Whether push notification has been sent.
+      example: true
+    announcement_sent:
+      description: Whether HomePod announcement has been sent.
+      example: true
+    timeline_append:
+      description: Timeline entry to append.
+      example: 10:24 HomePod announced
+visitor_delete:
+  name: Visitor Delete
+  description: Delete a Visitor Intelligence event.
+  fields:
+    event_id:
+      required: true
+      description: Visitor event identifier.
+      example: visitor-20260808102435987123
+visitor_get:
+  name: Visitor Get
+  description: Retrieve one Visitor Intelligence event by ID.
+  fields:
+    event_id:
+      required: true
+      description: Visitor event identifier.
+      example: visitor-20260808102435987123
+visitor_list:
+  name: Visitor List
+  description: List Visitor Intelligence events ordered by timestamp descending.
+  fields:
+    limit:
+      description: Maximum number of events to return.
+      example: 25
+    status:
+      description: Optional status filter.
+      example: new
+    camera:
+      description: Optional camera filter.
+      example: Front Door

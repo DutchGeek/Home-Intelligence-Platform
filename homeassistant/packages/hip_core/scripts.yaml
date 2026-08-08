@@ -55,20 +55,38 @@ script:
             {{ event_type | default('doorbell_pressed', true) }}
           resolved_source: >-
             {{ source | default('security.front_door', true) }}
+          resolved_camera_name: >-
+            {{ 'Front Door' if resolved_source == 'security.front_door' else resolved_source }}
           resolved_message: >-
-            {{ message | default('Front door doorbell pressed', true) }}
+            {{ message | default('Someone is at the front door.', true) }}
           resolved_occurred_at: >-
             {{ occurred_at | default(now().strftime('%Y-%m-%dT%H:%M:%S%z'), true) }}
           resolved_event_id: >-
             {{ event_id | default('hip-' ~ now().strftime('%Y%m%d%H%M%S%f'), true) }}
           resolved_artifact_path: >-
-            {{ artifact_path | default(states(states('input_text.hip_registry_snapshot_artifact_path_entity')), true) | default('/config/www/snapshots/front_door_latest.jpg', true) }}
+            {{ '/config/www/snapshots/history/' ~ resolved_event_id ~ '.jpg' }}
           resolved_artifact_public_path: >-
-            {{ artifact_public_path | default(states(states('input_text.hip_registry_snapshot_public_path_entity')), true) | default('/local/snapshots/front_door_latest.jpg', true) }}
+            {{ '/local/snapshots/history/' ~ resolved_event_id ~ '.jpg' }}
           resolved_history_artifact_path: >-
             {{ '/config/www/snapshots/history/' ~ resolved_event_id ~ '.jpg' }}
           resolved_history_artifact_public_path: >-
             {{ '/local/snapshots/history/' ~ resolved_event_id ~ '.jpg' }}
+      - action: hip.visitor_create
+        data:
+          event_id: "{{ resolved_event_id }}"
+          type: visitor
+          status: new
+          camera: "{{ resolved_camera_name }}"
+          timestamp: "{{ resolved_occurred_at }}"
+          person: null
+          snapshot: null
+          confidence: null
+          notification_sent: false
+          announcement_sent: false
+          timeline_append: "{{ now().strftime('%H:%M') }} Doorbell pressed"
+        response_variable: visitor_create_result
+      - condition: template
+        value_template: "{{ visitor_create_result.ok | default(false) }}"
       - action: script.hip_event_persist
         data:
           event_id: "{{ resolved_event_id }}"
@@ -109,6 +127,13 @@ script:
           artifact_public_path: "{{ resolved_artifact_public_path }}"
           snapshot_file: "{{ resolved_artifact_path }}"
           history_snapshot_file: "{{ resolved_history_artifact_path }}"
+      - action: hip.visitor_update
+        data:
+          event_id: "{{ resolved_event_id }}"
+          status: snapshot_captured
+          snapshot: "{{ resolved_history_artifact_public_path }}"
+          timeline_append: "{{ now().strftime('%H:%M') }} Snapshot captured"
+        response_variable: visitor_snapshot_result
       - action: script.hip_event_persist
         data:
           event_id: "{{ resolved_event_id }}"
@@ -120,17 +145,6 @@ script:
           lifecycle: artifact_captured
           artifact_path: "{{ resolved_artifact_path }}"
           artifact_public_path: "{{ resolved_artifact_public_path }}"
-      - action: script.hip_record_visitor_event
-        data:
-          event_id: "{{ resolved_event_id }}"
-          contract_version: "{{ resolved_contract_version }}"
-          event_type: "{{ resolved_event_type }}"
-          source: "{{ resolved_source }}"
-          message: "{{ resolved_message }}"
-          occurred_at: "{{ resolved_occurred_at }}"
-          lifecycle: completed
-          artifact_path: "{{ resolved_history_artifact_path }}"
-          artifact_public_path: "{{ resolved_history_artifact_public_path }}"
       - action: script.hip_event_dispatch
         data:
           event_id: "{{ resolved_event_id }}"
@@ -140,8 +154,23 @@ script:
           message: "{{ resolved_message }}"
           occurred_at: "{{ resolved_occurred_at }}"
           lifecycle: dispatched
+          camera: "{{ resolved_camera_name }}"
+          person: null
+          timestamp: "{{ resolved_occurred_at }}"
           artifact_path: "{{ resolved_artifact_path }}"
-          artifact_public_path: "{{ resolved_artifact_public_path }}"
+          artifact_public_path: "{{ resolved_history_artifact_public_path }}"
+      - action: hip.visitor_update
+        data:
+          event_id: "{{ resolved_event_id }}"
+          status: completed
+          notification_sent: true
+          announcement_sent: true
+          timeline_append: "{{ now().strftime('%H:%M') }} Notification sent"
+        response_variable: visitor_notification_result
+      - action: hip.visitor_update
+        data:
+          event_id: "{{ resolved_event_id }}"
+          timeline_append: "{{ now().strftime('%H:%M') }} HomePod announced"
       - action: script.hip_event_persist
         data:
           event_id: "{{ resolved_event_id }}"
@@ -152,7 +181,11 @@ script:
           occurred_at: "{{ resolved_occurred_at }}"
           lifecycle: completed
           artifact_path: "{{ resolved_artifact_path }}"
-          artifact_public_path: "{{ resolved_artifact_public_path }}"
+          artifact_public_path: "{{ resolved_history_artifact_public_path }}"
+      - action: script.hip_record_visitor_event
+        data:
+          event_id: "{{ resolved_event_id }}"
+          increment_daily: true
 
   hip_event_persist:
     alias: HIP Event Persistence
@@ -306,6 +339,12 @@ script:
         required: true
       lifecycle:
         required: true
+      camera:
+        required: false
+      person:
+        required: false
+      timestamp:
+        required: false
       artifact_path:
         required: false
       artifact_public_path:
@@ -320,6 +359,10 @@ script:
           message: "{{ message }}"
           occurred_at: "{{ occurred_at }}"
           lifecycle: "{{ lifecycle }}"
+          camera: "{{ camera | default('Front Door', true) }}"
+          person: "{{ person | default('', true) }}"
+          timestamp: "{{ timestamp | default(occurred_at, true) }}"
+          snapshot: "{{ artifact_public_path | default('', true) }}"
           artifact_path: "{{ artifact_path | default('', true) }}"
           artifact_public_path: "{{ artifact_public_path | default('', true) }}"
       - action: script.hip_homepod_announce
@@ -331,6 +374,10 @@ script:
           message: "{{ message }}"
           occurred_at: "{{ occurred_at }}"
           lifecycle: "{{ lifecycle }}"
+          camera: "{{ camera | default('Front Door', true) }}"
+          person: "{{ person | default('', true) }}"
+          timestamp: "{{ timestamp | default(occurred_at, true) }}"
+          snapshot: "{{ artifact_public_path | default('', true) }}"
           artifact_path: "{{ artifact_path | default('', true) }}"
           artifact_public_path: "{{ artifact_public_path | default('', true) }}"
       - action: script.hip_log_event

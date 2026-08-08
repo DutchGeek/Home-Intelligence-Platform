@@ -54,6 +54,7 @@ from .const import (
 )
 from .models import HipStatus, ModuleStatus, first_existing_path, is_upgrade_available, release_notes_path
 from .update_manager import HipUpdateManager
+from .visitor_storage import HipVisitorStorage, VisitorEventNotFoundError
 from .validation import (
     runtime_status,
     smoke_test_matrix,
@@ -93,6 +94,7 @@ class HipDataUpdateCoordinator(DataUpdateCoordinator[HipStatus]):
             base_path=Path(self.hass.config.path()),
             github_repo=self.github_repo,
         )
+        self.visitor_storage = HipVisitorStorage(hass)
         super().__init__(hass, _LOGGER, name=COORDINATOR_NAME, update_interval=SCAN_INTERVAL)
 
     @property
@@ -401,6 +403,36 @@ class HipDataUpdateCoordinator(DataUpdateCoordinator[HipStatus]):
             ATTR_RELEASE_NOTES_URL: self.data.release_notes_url,
         }
 
+    async def visitor_create(self, payload: dict[str, Any]) -> dict[str, Any]:
+        event = await self.visitor_storage.create(payload)
+        await self.async_request_refresh()
+        return {"ok": True, "event": event}
+
+    async def visitor_update(self, event_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            event = await self.visitor_storage.update(event_id, payload)
+        except VisitorEventNotFoundError:
+            return {"ok": False, "error": f"event not found: {event_id}"}
+
+        await self.async_request_refresh()
+        return {"ok": True, "event": event}
+
+    async def visitor_delete(self, event_id: str) -> dict[str, Any]:
+        deleted = await self.visitor_storage.delete(event_id)
+        await self.async_request_refresh()
+        return {"ok": deleted, "event_id": event_id}
+
+    async def visitor_get(self, event_id: str) -> dict[str, Any]:
+        try:
+            event = await self.visitor_storage.get(event_id)
+        except VisitorEventNotFoundError:
+            return {"ok": False, "error": f"event not found: {event_id}", "event_id": event_id}
+        return {"ok": True, "event": event}
+
+    async def visitor_list(self, *, limit: int | None = None, status: str | None = None, camera: str | None = None) -> dict[str, Any]:
+        events = await self.visitor_storage.list(limit=limit, status=status, camera=camera)
+        return {"ok": True, "count": len(events), "events": events}
+
     async def export_support_bundle(self) -> dict[str, Any]:
         await self.async_request_refresh()
         payload = self._support_bundle_payload()
@@ -451,6 +483,16 @@ class HipDataUpdateCoordinator(DataUpdateCoordinator[HipStatus]):
                 "compiler_report_path": str(compiler_report_path),
             },
             "package_compiler": compiler_report,
+            "visitor_storage": {
+                "path": str(self.visitor_storage.path),
+                "service_api": [
+                    "hip.visitor_create",
+                    "hip.visitor_update",
+                    "hip.visitor_delete",
+                    "hip.visitor_get",
+                    "hip.visitor_list",
+                ],
+            },
             "device_registry": registry,
             "event_statistics": self.data.event_statistics if self.data else {},
             "recent_errors": recent_errors,

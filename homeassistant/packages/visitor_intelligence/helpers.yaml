@@ -1,4 +1,86 @@
 input_text:
+  hip_visitor_active_event_id:
+    name: HIP Visitor Active Event ID
+    max: 96
+  hip_visitor_active_timeline:
+    name: HIP Visitor Active Timeline
+    max: 1024
+
+  hip_visitor_card_1_event_id:
+    name: HIP Visitor Card 1 Event ID
+    max: 96
+  hip_visitor_card_1_name:
+    name: HIP Visitor Card 1 Name
+    max: 96
+  hip_visitor_card_1_camera:
+    name: HIP Visitor Card 1 Camera
+    max: 96
+  hip_visitor_card_1_timestamp:
+    name: HIP Visitor Card 1 Timestamp
+    max: 96
+  hip_visitor_card_1_status:
+    name: HIP Visitor Card 1 Status
+    max: 64
+  hip_visitor_card_1_confidence:
+    name: HIP Visitor Card 1 Confidence
+    max: 64
+  hip_visitor_card_1_snapshot:
+    name: HIP Visitor Card 1 Snapshot
+    max: 255
+  hip_visitor_card_1_timeline:
+    name: HIP Visitor Card 1 Timeline
+    max: 1024
+
+  hip_visitor_card_2_event_id:
+    name: HIP Visitor Card 2 Event ID
+    max: 96
+  hip_visitor_card_2_name:
+    name: HIP Visitor Card 2 Name
+    max: 96
+  hip_visitor_card_2_camera:
+    name: HIP Visitor Card 2 Camera
+    max: 96
+  hip_visitor_card_2_timestamp:
+    name: HIP Visitor Card 2 Timestamp
+    max: 96
+  hip_visitor_card_2_status:
+    name: HIP Visitor Card 2 Status
+    max: 64
+  hip_visitor_card_2_confidence:
+    name: HIP Visitor Card 2 Confidence
+    max: 64
+  hip_visitor_card_2_snapshot:
+    name: HIP Visitor Card 2 Snapshot
+    max: 255
+  hip_visitor_card_2_timeline:
+    name: HIP Visitor Card 2 Timeline
+    max: 1024
+
+  hip_visitor_card_3_event_id:
+    name: HIP Visitor Card 3 Event ID
+    max: 96
+  hip_visitor_card_3_name:
+    name: HIP Visitor Card 3 Name
+    max: 96
+  hip_visitor_card_3_camera:
+    name: HIP Visitor Card 3 Camera
+    max: 96
+  hip_visitor_card_3_timestamp:
+    name: HIP Visitor Card 3 Timestamp
+    max: 96
+  hip_visitor_card_3_status:
+    name: HIP Visitor Card 3 Status
+    max: 64
+  hip_visitor_card_3_confidence:
+    name: HIP Visitor Card 3 Confidence
+    max: 64
+  hip_visitor_card_3_snapshot:
+    name: HIP Visitor Card 3 Snapshot
+    max: 255
+  hip_visitor_card_3_timeline:
+    name: HIP Visitor Card 3 Timeline
+    max: 1024
+
   hip_visitor_timeline_1:
     name: HIP Visitor Timeline 1
     max: 255

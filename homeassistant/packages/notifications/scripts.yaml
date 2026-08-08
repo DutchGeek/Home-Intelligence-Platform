@@ -17,17 +17,32 @@ script:
         required: false
       lifecycle:
         required: false
+      camera:
+        required: false
+      person:
+        required: false
+      timestamp:
+        required: false
+      snapshot:
+        required: false
       artifact_path:
         required: false
       artifact_public_path:
         required: false
     sequence:
+      - variables:
+          resolved_snapshot: >-
+            {{ snapshot | default(artifact_public_path, true) | default('/local/snapshots/front_door_latest.jpg', true) }}
+          resolved_person: >-
+            {{ person | default('Someone', true) }}
+          resolved_camera: >-
+            {{ camera | default('Front Door', true) }}
       - action: "{{ states('input_text.hip_registry_mobile_notify_service') }}"
         data:
-          title: Doorbell
-          message: "{{ message | default('Someone is at the front door.', true) }}"
+          title: HIP Visitor Alert
+          message: >-
+            {{ resolved_person }} is at {{ resolved_camera }}.
           data:
             push:
               sound: default
-            image: >-
-              {{ artifact_public_path | default('/local/snapshots/front_door_latest.jpg', true) }}
+            image: "{{ resolved_snapshot }}"

@@ -1,0 +1,232 @@
+title: HIP Visitor Intelligence
+views:
+  - title: Visitors
+    path: visitors
+    icon: mdi:account-eye
+    cards:
+      - type: markdown
+        content: |
+          # Visitor Intelligence
+          Press the doorbell and HIP will create a visitor event, capture a snapshot,
+          update this dashboard, announce on HomePod, and send push notification.
+
+      - type: entities
+        title: Visitor Runtime
+        entities:
+          - input_boolean.hip_enabled
+          - input_number.hip_daily_visitor_count
+          - input_number.hip_daily_notification_count
+          - input_number.hip_daily_homepod_count
+          - input_number.hip_daily_snapshot_count
+          - input_text.hip_visitor_active_event_id
+          - input_text.hip_visitor_active_timeline
+
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: >-
+              {% set snapshot = states('input_text.hip_visitor_card_1_snapshot') %}
+              {% set name = states('input_text.hip_visitor_card_1_name') %}
+              {% set camera = states('input_text.hip_visitor_card_1_camera') %}
+              {% set timestamp = states('input_text.hip_visitor_card_1_timestamp') %}
+              {% set status = states('input_text.hip_visitor_card_1_status') %}
+              {% set confidence = states('input_text.hip_visitor_card_1_confidence') %}
+              {% if snapshot not in ['unknown', 'unavailable', ''] %}
+              ![]({{ snapshot }})
+              {% endif %}
+              ## Visitor Card 1
+              - Name: {{ name if name not in ['unknown', 'unavailable', ''] else 'Unknown' }}
+              - Camera: {{ camera }}
+              - Timestamp: {{ timestamp }}
+              - Status: {{ status }}
+              - Confidence: {{ confidence }}
+          - type: horizontal-stack
+            cards:
+              - type: button
+                name: Open Camera
+                icon: mdi:cctv
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_open_camera
+                  data:
+                    slot: 1
+              - type: button
+                name: Open Snapshot
+                icon: mdi:image
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_open_snapshot
+                  data:
+                    slot: 1
+              - type: button
+                name: Open Timeline
+                icon: mdi:timeline-clock
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_open_timeline
+                  data:
+                    slot: 1
+              - type: button
+                name: Mark Known
+                icon: mdi:account-check
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_mark_known
+                  data:
+                    slot: 1
+              - type: button
+                name: Ignore
+                icon: mdi:eye-off
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_ignore
+                  data:
+                    slot: 1
+              - type: button
+                name: Delete
+                icon: mdi:delete
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_delete
+                  data:
+                    slot: 1
+
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: >-
+              {% set snapshot = states('input_text.hip_visitor_card_2_snapshot') %}
+              {% set name = states('input_text.hip_visitor_card_2_name') %}
+              {% set camera = states('input_text.hip_visitor_card_2_camera') %}
+              {% set timestamp = states('input_text.hip_visitor_card_2_timestamp') %}
+              {% set status = states('input_text.hip_visitor_card_2_status') %}
+              {% set confidence = states('input_text.hip_visitor_card_2_confidence') %}
+              {% if snapshot not in ['unknown', 'unavailable', ''] %}
+              ![]({{ snapshot }})
+              {% endif %}
+              ## Visitor Card 2
+              - Name: {{ name if name not in ['unknown', 'unavailable', ''] else 'Unknown' }}
+              - Camera: {{ camera }}
+              - Timestamp: {{ timestamp }}
+              - Status: {{ status }}
+              - Confidence: {{ confidence }}
+          - type: horizontal-stack
+            cards:
+              - type: button
+                name: Open Camera
+                icon: mdi:cctv
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_open_camera
+                  data:
+                    slot: 2
+              - type: button
+                name: Open Snapshot
+                icon: mdi:image
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_open_snapshot
+                  data:
+                    slot: 2
+              - type: button
+                name: Open Timeline
+                icon: mdi:timeline-clock
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_open_timeline
+                  data:
+                    slot: 2
+              - type: button
+                name: Mark Known
+                icon: mdi:account-check
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_mark_known
+                  data:
+                    slot: 2
+              - type: button
+                name: Ignore
+                icon: mdi:eye-off
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_ignore
+                  data:
+                    slot: 2
+              - type: button
+                name: Delete
+                icon: mdi:delete
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_delete
+                  data:
+                    slot: 2
+
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: >-
+              {% set snapshot = states('input_text.hip_visitor_card_3_snapshot') %}
+              {% set name = states('input_text.hip_visitor_card_3_name') %}
+              {% set camera = states('input_text.hip_visitor_card_3_camera') %}
+              {% set timestamp = states('input_text.hip_visitor_card_3_timestamp') %}
+              {% set status = states('input_text.hip_visitor_card_3_status') %}
+              {% set confidence = states('input_text.hip_visitor_card_3_confidence') %}
+              {% if snapshot not in ['unknown', 'unavailable', ''] %}
+              ![]({{ snapshot }})
+              {% endif %}
+              ## Visitor Card 3
+              - Name: {{ name if name not in ['unknown', 'unavailable', ''] else 'Unknown' }}
+              - Camera: {{ camera }}
+              - Timestamp: {{ timestamp }}
+              - Status: {{ status }}
+              - Confidence: {{ confidence }}
+          - type: horizontal-stack
+            cards:
+              - type: button
+                name: Open Camera
+                icon: mdi:cctv
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_open_camera
+                  data:
+                    slot: 3
+              - type: button
+                name: Open Snapshot
+                icon: mdi:image
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_open_snapshot
+                  data:
+                    slot: 3
+              - type: button
+                name: Open Timeline
+                icon: mdi:timeline-clock
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_open_timeline
+                  data:
+                    slot: 3
+              - type: button
+                name: Mark Known
+                icon: mdi:account-check
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_mark_known
+                  data:
+                    slot: 3
+              - type: button
+                name: Ignore
+                icon: mdi:eye-off
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_ignore
+                  data:
+                    slot: 3
+              - type: button
+                name: Delete
+                icon: mdi:delete
+                tap_action:
+                  action: call-service
+                  service: script.hip_visitor_delete
+                  data:
+                    slot: 3

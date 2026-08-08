@@ -17,15 +17,32 @@ script:
         required: false
       lifecycle:
         required: false
+      camera:
+        required: false
+      person:
+        required: false
+      timestamp:
+        required: false
+      snapshot:
+        required: false
       artifact_path:
         required: false
       artifact_public_path:
         required: false
     sequence:
+      - variables:
+          resolved_camera: >-
+            {{ camera | default('front door', true) }}
+          resolved_person: >-
+            {{ person | default('', true) }}
       - action: tts.speak
         target:
           entity_id: "{{ states('input_text.hip_registry_piper_tts_entity') }}"
         data:
           media_player_entity_id: "{{ states('input_text.hip_registry_homepod_player_entity') }}"
           message: >-
-            {{ message | default('Attention. There is someone at the front door.', true) }}
+            {% if resolved_person != '' and resolved_person != 'Unknown' %}
+              {{ resolved_person }} is at the {{ resolved_camera }}.
+            {% else %}
+              Someone is at the {{ resolved_camera }}.
+            {% endif %}

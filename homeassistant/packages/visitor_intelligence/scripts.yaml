@@ -5,36 +5,22 @@ script:
     fields:
       event_id:
         required: true
-      contract_version:
-        required: true
-      event_type:
-        required: true
-      source:
-        required: true
-      message:
-        required: true
-      occurred_at:
-        required: true
-      lifecycle:
-        required: true
-      artifact_path:
-        required: false
-      artifact_public_path:
+      increment_daily:
         required: false
     sequence:
+      - action: hip.visitor_get
+        data:
+          event_id: "{{ event_id }}"
+        response_variable: visitor_get_result
+      - condition: template
+        value_template: "{{ visitor_get_result.ok | default(false) }}"
       - variables:
+          visitor_event: "{{ visitor_get_result.event }}"
+          visitor_snapshot: "{{ visitor_event.snapshot | default('/local/snapshots/front_door_latest.jpg', true) }}"
+          visitor_name: "{{ visitor_event.person | default('Unknown', true) }}"
+          visitor_timeline_text: "{{ (visitor_event.timeline | default([])) | join('\\n') }}"
           resolved_today: "{{ now().strftime('%Y-%m-%d') }}"
           resolved_previous_day: "{{ states('input_text.hip_visitor_stats_day') }}"
-          resolved_who: >-
-            {% if source == 'security.front_door' %}
-              Front door visitor
-            {% else %}
-              Visitor event
-            {% endif %}
-          resolved_timeline_entry: >-
-            {{ occurred_at }} | {{ resolved_who }} | {{ message }}
-          resolved_snapshot_history_entry: >-
-            {{ artifact_public_path | default('/local/snapshots/front_door_latest.jpg', true) }}
       - choose:
           - conditions:
               - condition: template
@@ -89,7 +75,8 @@ script:
         target:
           entity_id: input_text.hip_visitor_timeline_1
         data:
-          value: "{{ resolved_timeline_entry }}"
+          value: >-
+            {{ visitor_event.timestamp }} | {{ visitor_name }} | {{ visitor_event.camera }} | {{ visitor_event.status }}
       - action: input_text.set_value
         target:
           entity_id: input_text.hip_snapshot_history_5
@@ -114,65 +101,257 @@ script:
         target:
           entity_id: input_text.hip_snapshot_history_1
         data:
-          value: "{{ resolved_snapshot_history_entry }}"
+          value: "{{ visitor_snapshot }}"
       - action: input_text.set_value
         target:
           entity_id: input_text.hip_event_detail_when
         data:
-          value: "{{ occurred_at }}"
+          value: "{{ visitor_event.timestamp }}"
       - action: input_text.set_value
         target:
           entity_id: input_text.hip_event_detail_what
         data:
-          value: "{{ message }}"
+          value: "{{ visitor_event.status | title }}"
       - action: input_text.set_value
         target:
           entity_id: input_text.hip_event_detail_who
         data:
-          value: "{{ resolved_who }}"
+          value: "{{ visitor_name }}"
       - action: input_text.set_value
         target:
           entity_id: input_text.hip_event_detail_notified
         data:
-          value: yes
+          value: "{{ 'yes' if visitor_event.notification_sent else 'no' }}"
       - action: input_text.set_value
         target:
           entity_id: input_text.hip_event_detail_announced
         data:
-          value: yes
+          value: "{{ 'yes' if visitor_event.announcement_sent else 'no' }}"
       - action: input_text.set_value
         target:
           entity_id: input_text.hip_event_detail_snapshot
         data:
-          value: "{{ 'yes' if artifact_public_path | default('', true) != '' else 'no' }}"
+          value: "{{ 'yes' if visitor_event.snapshot | default('', true) != '' else 'no' }}"
       - action: input_text.set_value
         target:
           entity_id: input_text.hip_event_detail_snapshot_url
         data:
-          value: "{{ artifact_public_path | default('/local/snapshots/front_door_latest.jpg', true) }}"
-      - action: input_number.set_value
+          value: "{{ visitor_snapshot }}"
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ increment_daily | default(false) | bool }}"
+            sequence:
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.hip_daily_visitor_count
+                data:
+                  value: "{{ states('input_number.hip_daily_visitor_count') | float(0) + 1 }}"
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.hip_daily_notification_count
+                data:
+                  value: "{{ states('input_number.hip_daily_notification_count') | float(0) + (1 if visitor_event.notification_sent else 0) }}"
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.hip_daily_homepod_count
+                data:
+                  value: "{{ states('input_number.hip_daily_homepod_count') | float(0) + (1 if visitor_event.announcement_sent else 0) }}"
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.hip_daily_snapshot_count
+                data:
+                  value: "{{ states('input_number.hip_daily_snapshot_count') | float(0) + (1 if visitor_event.snapshot | default('', true) != '' else 0) }}"
+      - action: input_text.set_value
         target:
-          entity_id: input_number.hip_daily_visitor_count
+          entity_id: input_text.hip_visitor_active_event_id
         data:
-          value: "{{ states('input_number.hip_daily_visitor_count') | float(0) + 1 }}"
-      - action: input_number.set_value
+          value: "{{ visitor_event.event_id }}"
+      - action: input_text.set_value
         target:
-          entity_id: input_number.hip_daily_notification_count
+          entity_id: input_text.hip_visitor_active_timeline
         data:
-          value: "{{ states('input_number.hip_daily_notification_count') | float(0) + 1 }}"
-      - action: input_number.set_value
-        target:
-          entity_id: input_number.hip_daily_homepod_count
+          value: "{{ visitor_timeline_text }}"
+      - action: script.hip_visitor_dashboard_sync
+
+  hip_visitor_dashboard_sync:
+    alias: HIP Visitor Dashboard Sync
+    mode: queued
+    sequence:
+      - action: hip.visitor_list
         data:
-          value: "{{ states('input_number.hip_daily_homepod_count') | float(0) + 1 }}"
-      - action: input_number.set_value
-        target:
-          entity_id: input_number.hip_daily_snapshot_count
+          limit: 3
+        response_variable: visitor_list_result
+      - variables:
+          visitor_events: "{{ visitor_list_result.events | default([]) }}"
+      - repeat:
+          for_each:
+            - 1
+            - 2
+            - 3
+          sequence:
+            - variables:
+                slot: "{{ repeat.item }}"
+                idx: "{{ repeat.item - 1 }}"
+                slot_event: >-
+                  {% if visitor_events | count > idx %}
+                    {{ visitor_events[idx] }}
+                  {% else %}
+                    {{ dict() }}
+                  {% endif %}
+                slot_name: "{{ slot_event.person | default('Unknown', true) }}"
+                slot_confidence: >-
+                  {% if slot_event.confidence is not none %}
+                    {{ (slot_event.confidence | float(0) * 100) | round(0) }}%
+                  {% else %}
+                    n/a
+                  {% endif %}
+                slot_snapshot: "{{ slot_event.snapshot | default('/local/snapshots/front_door_latest.jpg', true) }}"
+                slot_timeline: "{{ (slot_event.timeline | default([])) | join('\\n') }}"
+            - action: input_text.set_value
+              target:
+                entity_id: "{{ 'input_text.hip_visitor_card_' ~ slot ~ '_event_id' }}"
+              data:
+                value: "{{ slot_event.event_id | default('', true) }}"
+            - action: input_text.set_value
+              target:
+                entity_id: "{{ 'input_text.hip_visitor_card_' ~ slot ~ '_name' }}"
+              data:
+                value: "{{ slot_name }}"
+            - action: input_text.set_value
+              target:
+                entity_id: "{{ 'input_text.hip_visitor_card_' ~ slot ~ '_camera' }}"
+              data:
+                value: "{{ slot_event.camera | default('', true) }}"
+            - action: input_text.set_value
+              target:
+                entity_id: "{{ 'input_text.hip_visitor_card_' ~ slot ~ '_timestamp' }}"
+              data:
+                value: "{{ slot_event.timestamp | default('', true) }}"
+            - action: input_text.set_value
+              target:
+                entity_id: "{{ 'input_text.hip_visitor_card_' ~ slot ~ '_status' }}"
+              data:
+                value: "{{ slot_event.status | default('', true) }}"
+            - action: input_text.set_value
+              target:
+                entity_id: "{{ 'input_text.hip_visitor_card_' ~ slot ~ '_confidence' }}"
+              data:
+                value: "{{ slot_confidence }}"
+            - action: input_text.set_value
+              target:
+                entity_id: "{{ 'input_text.hip_visitor_card_' ~ slot ~ '_snapshot' }}"
+              data:
+                value: "{{ slot_snapshot }}"
+            - action: input_text.set_value
+              target:
+                entity_id: "{{ 'input_text.hip_visitor_card_' ~ slot ~ '_timeline' }}"
+              data:
+                value: "{{ slot_timeline }}"
+
+  hip_visitor_open_camera:
+    alias: HIP Visitor Open Camera
+    mode: queued
+    fields:
+      slot:
+        required: true
+    sequence:
+      - action: persistent_notification.create
         data:
-          value: "{{ states('input_number.hip_daily_snapshot_count') | float(0) + 1 }}"
-      - action: logbook.log
-        data:
-          name: HIP Visitor Intelligence
+          title: HIP Visitor Camera
           message: >-
-            when={{ occurred_at }}, who={{ resolved_who }}, notified=yes, announced=yes,
-            snapshot={{ 'yes' if artifact_public_path | default('', true) != '' else 'no' }}
+            Camera entity: {{ states('input_text.hip_registry_front_door_camera_entity') }}
+
+  hip_visitor_open_snapshot:
+    alias: HIP Visitor Open Snapshot
+    mode: queued
+    fields:
+      slot:
+        required: true
+    sequence:
+      - variables:
+          snapshot_url: "{{ states('input_text.hip_visitor_card_' ~ (slot | string) ~ '_snapshot') }}"
+      - action: persistent_notification.create
+        data:
+          title: HIP Visitor Snapshot
+          message: "{{ snapshot_url if snapshot_url not in ['unknown', 'unavailable', ''] else 'No snapshot available' }}"
+
+  hip_visitor_open_timeline:
+    alias: HIP Visitor Open Timeline
+    mode: queued
+    fields:
+      slot:
+        required: true
+    sequence:
+      - variables:
+          event_id: "{{ states('input_text.hip_visitor_card_' ~ (slot | string) ~ '_event_id') }}"
+      - action: hip.visitor_get
+        data:
+          event_id: "{{ event_id }}"
+        response_variable: visitor_get_result
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ visitor_get_result.ok | default(false) }}"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: HIP Visitor Timeline
+                  message: "{{ (visitor_get_result.event.timeline | default([])) | join('\\n') }}"
+
+  hip_visitor_mark_known:
+    alias: HIP Visitor Mark Known
+    mode: queued
+    fields:
+      slot:
+        required: true
+      person:
+        required: false
+    sequence:
+      - variables:
+          event_id: "{{ states('input_text.hip_visitor_card_' ~ (slot | string) ~ '_event_id') }}"
+          resolved_person: "{{ person | default('Known Visitor', true) }}"
+      - condition: template
+        value_template: "{{ event_id not in ['unknown', 'unavailable', ''] }}"
+      - action: hip.visitor_update
+        data:
+          event_id: "{{ event_id }}"
+          status: known
+          person: "{{ resolved_person }}"
+          confidence: 1.0
+          timeline_append: "{{ now().strftime('%H:%M') }} Marked known"
+      - action: script.hip_visitor_dashboard_sync
+
+  hip_visitor_ignore:
+    alias: HIP Visitor Ignore
+    mode: queued
+    fields:
+      slot:
+        required: true
+    sequence:
+      - variables:
+          event_id: "{{ states('input_text.hip_visitor_card_' ~ (slot | string) ~ '_event_id') }}"
+      - condition: template
+        value_template: "{{ event_id not in ['unknown', 'unavailable', ''] }}"
+      - action: hip.visitor_update
+        data:
+          event_id: "{{ event_id }}"
+          status: ignored
+          timeline_append: "{{ now().strftime('%H:%M') }} Ignored"
+      - action: script.hip_visitor_dashboard_sync
+
+  hip_visitor_delete:
+    alias: HIP Visitor Delete
+    mode: queued
+    fields:
+      slot:
+        required: true
+    sequence:
+      - variables:
+          event_id: "{{ states('input_text.hip_visitor_card_' ~ (slot | string) ~ '_event_id') }}"
+      - condition: template
+        value_template: "{{ event_id not in ['unknown', 'unavailable', ''] }}"
+      - action: hip.visitor_delete
+        data:
+          event_id: "{{ event_id }}"
+      - action: script.hip_visitor_dashboard_sync

@@ -28,6 +28,11 @@ REQUIRED_SERVICES = {
     "check_updates",
     "open_release_notes",
     "deployment_status",
+    "visitor_create",
+    "visitor_update",
+    "visitor_delete",
+    "visitor_get",
+    "visitor_list",
 }
 
 REQUIRED_DEPLOYMENT_SCRIPTS = {
@@ -134,3 +139,11 @@ def test_deploy_scripts_compile_packages_before_copying_runtime_files() -> None:
     assert "hip_compile_package_artifacts" in prod_content
     assert "hip_copy_runtime_files" in prod_content
     assert prod_content.index("hip_compile_package_artifacts") < prod_content.index("hip_copy_runtime_files")
+
+
+def test_visitor_dashboard_exists() -> None:
+    dashboard = ROOT / "homeassistant" / "dashboards" / "Visitor-Dashboard.yaml"
+    assert dashboard.exists()
+    content = dashboard.read_text(encoding="utf-8")
+    assert "script.hip_visitor_mark_known" in content
+    assert "script.hip_visitor_delete" in content
